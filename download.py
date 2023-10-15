@@ -31,9 +31,33 @@ def main():
 
     # Read PNG func # TODO TADAM16
 
-    # Decode RLE func # TODO BENEDEK
+    # Decode RLE func
+
+    import numpy as np
+    def rl_decode(shape, lengths):
+        """
+        Run-length decoding of an array (starting with zeros).
+        """
+        arr = np.zeros(shape, dtype=int).reshape(-1)
+        value = 0
+        start = 0
+        for length in lengths:
+            arr[start:start + length] = value
+            start = start + length
+            if value == 0:
+                value = 1
+            else:
+                value = 0
+        arr = arr.reshape(shape)
+        return arr
+
+    def get_mask(shape, segmentation_str):
+        if segmentation_str is None:
+            return np.zeros(shape, dtype=int)
+        else:
+            lengths = [int(length) for length in segmentation_str.split(' ')]
+            return rl_decode(shape, lengths)
 
     # Create splits
 
     # Create dataset & dataloader
-

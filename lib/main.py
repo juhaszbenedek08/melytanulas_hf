@@ -6,13 +6,20 @@ import torchvision
 from matplotlib import pyplot as plt
 from torch.utils.data import Dataset, DataLoader, random_split
 import pandas as pd
-
+import numpy as np
 from PIL import Image
 
-csv_path = Path('data/train.csv')
-raw_dir = Path('data/train')
+data_dir = Path('/data')
+csv_path = data_dir / 'train.csv'
+raw_dir = data_dir / 'train'
+out_dir = Path('/out')
 
-import numpy as np
+i = 0
+
+
+def save_next(fig, name):
+    fig.savefig(out_dir / f'{name}_{i}.png')
+    i += 1
 
 
 def rl_decode(shape, sequence):
@@ -131,10 +138,12 @@ def main():
             img[..., 1] += sb_mask[0, 0]
             img[..., 2] += st_mask[0, 0]
             ax.imshow(img)
-            fig.show()
+            save_next(fig, 'test')
             return
 
-    # Dockerfile TODO Benedek
+    # TODO freeze reqs
+
+    # TODO coker compose, or at least remote interpreter setup
 
 
 if __name__ == '__main__':

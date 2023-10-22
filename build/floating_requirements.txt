@@ -1,0 +1,5 @@
+# Ignore: torch torchaudio torchvision
+matplotlib
+numpy
+scikit-image
+pandas

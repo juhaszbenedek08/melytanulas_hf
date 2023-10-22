@@ -1,6 +1,14 @@
 FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
 
-COPY ./floating_requirements.txt requirements.txt
+RUN apt-get update
+RUN apt-get install unzip -y
+
+COPY build/floating_requirements.txt requirements.txt
+# COPY build/frozen_requirements.txt requirements.txt
 
 RUN pip install -U pip
 RUN pip install -r requirements.txt
+
+RUN pip freeze # for freezing requirements.txt
+
+COPY build/startup.sh startup.sh

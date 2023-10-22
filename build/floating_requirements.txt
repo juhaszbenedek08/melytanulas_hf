@@ -1,5 +1,6 @@
-# Ignore: torch torchaudio torchvision
+# Ignore: torch torchaudio torchvision (base image is frozen)
 matplotlib
 numpy
 scikit-image
 pandas
+gdown

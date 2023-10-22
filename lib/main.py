@@ -8,18 +8,21 @@ from torch.utils.data import Dataset, DataLoader, random_split
 import pandas as pd
 import numpy as np
 from PIL import Image
+import gdown
 
 data_dir = Path('/data')
 csv_path = data_dir / 'train.csv'
 raw_dir = data_dir / 'train'
 out_dir = Path('/out')
 
-i = 0
+fig_num = 0
 
 
 def save_next(fig, name):
-    fig.savefig(out_dir / f'{name}_{i}.png')
-    i += 1
+    global fig_num
+    out_dir.mkdir(exist_ok=True)
+    fig.savefig(out_dir / f'{name}_{fig_num}.png')
+    fig_num += 1
 
 
 def rl_decode(shape, sequence):
@@ -111,14 +114,21 @@ class ColonDataset(Dataset):
 
 def download():
     # Download
-    url = 'https://drive.google.com/file/d/1nq7DCNJsm27z8nKdvFRxphUnokU41ZY6/view?usp=sharing'
-    zip_path = Path('./data.zip')
-    raw_dir = Path('')
-    subprocess.run(f'wget "{url}" -o "{str(zip_path)}"', shell=True)
-    subprocess.run(f'unzip "{str(zip_path)}" -d "{str(raw_dir)}"', shell=True)
+
+    if not data_dir.exists():
+        data_dir.mkdir()
+    if len(list(data_dir.iterdir())) > 0:
+        return
+    url = "https://drive.google.com/uc?id=1nq7DCNJsm27z8nKdvFRxphUnokU41ZY6"
+    zip_path = data_dir / 'raw.zip'
+    gdown.download(url, str(zip_path), quiet=False)
+    subprocess.run(f'unzip "{str(zip_path)}" -d "{str(raw_dir)}"', shell=True, check=True)
+    zip_path.unlink()
 
 
 def main():
+    download()
+
     ds = ColonDataset()
 
     train_data, val_data, test_data = random_split(
@@ -140,11 +150,6 @@ def main():
             ax.imshow(img)
             save_next(fig, 'test')
             return
-
-    # TODO freeze reqs
-
-    # TODO coker compose, or at least remote interpreter setup
-
 
 if __name__ == '__main__':
     main()

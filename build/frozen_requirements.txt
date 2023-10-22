@@ -1,0 +1,6 @@
+# Ignore: torch torchaudio torchvision (base image is frozen)
+matplotlib==3.8.0
+numpy==1.26.0
+pandas==2.1.1
+scikit-image==0.22.0
+gdown==4.7.1

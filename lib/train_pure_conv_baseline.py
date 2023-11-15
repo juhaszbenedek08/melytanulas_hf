@@ -2,24 +2,17 @@ import torch
 from torch.utils.data import DataLoader, random_split
 from unet import Unet
 import torch.utils.data
-from matplotlib import pyplot as plt
-import numpy as np
-import random
-import pickle
-import copy
-from PIL import Image
 from dataset import ColonDataset
 
 
 def dice_score(pred, gt):
-    tp = torch.sum(pred*gt)
+    tp = torch.sum(pred * gt)
     eps = 1e-6
     denom = torch.sum(pred + gt) + eps
-    return (2*tp + eps) / denom
+    return (2 * tp + eps) / denom
 
 
-def eval(model, loader):
-
+def eval(model, loader, lossfun):
     with torch.no_grad():
         losses = []
         dscs = []
@@ -36,42 +29,43 @@ def eval(model, loader):
 
     return loss, dsc
 
-ds = ColonDataset()
 
-train_data, val_data, test_data = random_split(
-    ds,
-    [0.8, 0.1, 0.1],
-    generator=torch.Generator().manual_seed(42)
-)
-train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
-val_loader = DataLoader(val_data, batch_size=1, shuffle=True)
-test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
+def main():
+    ds = ColonDataset()
 
-lossfun = torch.nn.BCELoss()
+    train_data, val_data, test_data = random_split(
+        ds,
+        [0.8, 0.1, 0.1],
+        generator=torch.Generator().manual_seed(42)
+    )
+    train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
+    val_loader = DataLoader(val_data, batch_size=1, shuffle=True)
+    test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
 
-model = Unet(
-    nbClasses=3,
-    outSize=(384, 384),
-).to('cuda')
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, eps=1e-7, weight_decay=1e-4)
+    lossfun = torch.nn.BCELoss()
 
-for img, lb_mask, sb_mask, st_mask in train_loader:
-    print('Picsa')
+    model = Unet(
+        nbClasses=3,
+        outSize=(384, 384),
+    ).to('cuda')
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, eps=1e-7, weight_decay=1e-4)
 
-    gt = torch.cat((lb_mask, sb_mask, st_mask), 1).to('cuda')
-    img = img.to('cuda')
-    pred = model(img)
-    loss = lossfun(pred, gt)
+    for img, lb_mask, sb_mask, st_mask in train_loader:
+        print('Picsa')
 
-    print(loss.item())
+        gt = torch.cat((lb_mask, sb_mask, st_mask), 1).to('cuda')
+        img = img.to('cuda')
+        pred = model(img)
+        loss = lossfun(pred, gt)
 
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
+        print(loss.item())
 
-    shouldval = True #todo
-    if(shouldval):
-        loss, dsc = eval(model, val_loader) #todo plotting and stuff
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
+        shouldval = True  # todo
+        if (shouldval):
+            loss, dsc = eval(model, val_loader, lossfun)  # todo plotting and stuff
 
-loss, dsc = eval(model, test_loader) #todo plotting and stuff
+    loss, dsc = eval(model, test_loader, lossfun)  # todo plotting and stuff

@@ -3,12 +3,14 @@ import subprocess
 import gdown
 import numpy as np
 import torchvision
-from torch.utils.data import Dataset
+from matplotlib import pyplot as plt
+from torch.utils.data import Dataset, dataset, random_split, DataLoader
 import torch
 import pandas as pd
 from PIL import Image
 
 from path_util import data_dir, raw_dir, csv_path
+from plot_util import save_next
 
 
 def rl_decode(shape, sequence):
@@ -55,6 +57,8 @@ def download():
 class ColonDataset(Dataset):
 
     def __init__(self):
+        download()
+
         self.all_scans = [
             (
                 str(removeprefix(case_dir.name, 'case')),
@@ -110,3 +114,27 @@ class ColonDataset(Dataset):
         st_mask = resizer(st_mask[None])
 
         return img, lb_mask, sb_mask, st_mask
+
+
+def main():
+    ds = dataset.ColonDataset()
+
+    train_data, val_data, test_data = random_split(
+        ds,
+        [0.8, 0.1, 0.1],
+        generator=torch.Generator().manual_seed(42)
+    )
+    train_loader = DataLoader(train_data, batch_size=64, shuffle=True)
+    val_loader = DataLoader(val_data, batch_size=64, shuffle=True)
+    test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
+
+    for img, lb_mask, sb_mask, st_mask in test_loader:
+        if lb_mask.sum() > 0 and sb_mask.sum() > 0 and st_mask.sum() > 0:
+            fig, ax = plt.subplots()  # type: plt.Figure, plt.Axes
+            img = torch.stack([img[0, 0]] * 3, dim=-1)
+            img[..., 0] += lb_mask[0, 0]
+            img[..., 1] += sb_mask[0, 0]
+            img[..., 2] += st_mask[0, 0]
+            ax.imshow(img)
+            save_next(fig, 'test')
+            return

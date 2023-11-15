@@ -1,20 +1,9 @@
-import subprocess
-from pathlib import Path
-
 import torch
-import torchvision
 from matplotlib import pyplot as plt
-from torch.utils.data import Dataset, DataLoader, random_split
-import pandas as pd
-import numpy as np
-from PIL import Image
-import gdown
-from dataset import ColonDataset
+from torch.utils.data import DataLoader, random_split
 
-data_dir = Path('/data')
-csv_path = data_dir / 'train.csv'
-raw_dir = data_dir / 'train'
-out_dir = Path('/out')
+import dataset
+from path_util import out_dir
 
 fig_num = 0
 
@@ -26,51 +15,37 @@ def save_next(fig, name):
     fig_num += 1
 
 
-def rl_decode(shape, sequence):
-    """
-    Run-length decoding of an array (starting with zeros).
-    """
-    arr = np.zeros(shape, dtype=int).reshape(-1)
-    starts = sequence[0::2]
-    lengths = sequence[1::2]
-    for start, length in zip(starts, lengths):
-        arr[start: start + length] = 1
-    arr = arr.reshape(shape)
-    return arr
-
-
-def get_mask(shape, segmentation_str):
-    if segmentation_str == '':
-        return np.zeros(shape, dtype=int)
-    else:
-        lengths = [int(length) for length in segmentation_str.split(' ')]
-        return rl_decode(shape, lengths)
-
-
-def removeprefix(text, prefix):
-    if text.startswith(prefix):
-        return text[len(prefix):]
-    return text  # or whatever
-
-
-def download():
-    # Download
-
-    if not data_dir.exists():
-        data_dir.mkdir()
-    if len(list(data_dir.iterdir())) > 0:
-        return
-    url = "https://drive.google.com/uc?id=1nq7DCNJsm27z8nKdvFRxphUnokU41ZY6"
-    zip_path = data_dir / 'raw.zip'
-    gdown.download(url, str(zip_path), quiet=False)
-    subprocess.run(f'unzip "{str(zip_path)}" -d "{str(raw_dir)}"', shell=True, check=True)
-    zip_path.unlink()
-
+import torchvision
 
 def main():
-    download()
 
-    ds = ColonDataset()
+    import train_pure_conv_baseline
+
+    print(torch.cuda.is_available())
+
+    with torch.device('cuda'):
+        import torchvision
+        model = torchvision.models.vit_b_16(
+            weights=torchvision.models.ViT_B_16_Weights.IMAGENET1K_SWAG_E2E_V1,
+            progress=True
+        )
+
+        model.heads = torch.nn.Identity()
+
+        print(model)
+        input_ = torch.zeros((4, 3, 384,384))
+        output = model(input_) # type: torch
+        print(output.shape)
+
+    # TODO 1 -> 3 channels
+    # TODO mean=[0.485, 0.456, 0.406] and std=[0.229, 0.224, 0.225]
+    # TODO keresni egy segmentation vision transformert (esetleg azt is h hogy mukszik)
+    # TODO denseunet & lighnting (& determined akár) -> kevesebb memória
+
+
+    dataset.download()
+
+    ds = dataset.ColonDataset()
 
     train_data, val_data, test_data = random_split(
         ds,
@@ -91,6 +66,9 @@ def main():
             ax.imshow(img)
             save_next(fig, 'test')
             return
+
+
+
 
 if __name__ == '__main__':
     main()

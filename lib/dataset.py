@@ -1,6 +1,55 @@
+import subprocess
+
+import gdown
+import numpy as np
+import torchvision
 from torch.utils.data import Dataset
 import torch
 import pandas as pd
+from PIL import Image
+
+from path_util import data_dir, raw_dir, csv_path
+
+
+def rl_decode(shape, sequence):
+    """
+    Run-length decoding of an array (starting with zeros).
+    """
+    arr = np.zeros(shape, dtype=int).reshape(-1)
+    starts = sequence[0::2]
+    lengths = sequence[1::2]
+    for start, length in zip(starts, lengths):
+        arr[start: start + length] = 1
+    arr = arr.reshape(shape)
+    return arr
+
+
+def get_mask(shape, segmentation_str):
+    if segmentation_str == '':
+        return np.zeros(shape, dtype=int)
+    else:
+        lengths = [int(length) for length in segmentation_str.split(' ')]
+        return rl_decode(shape, lengths)
+
+
+def removeprefix(text, prefix):
+    if text.startswith(prefix):
+        return text[len(prefix):]
+    return text  # or whatever
+
+
+def download():
+    # Download
+
+    if not data_dir.exists():
+        data_dir.mkdir()
+    if len(list(data_dir.iterdir())) > 0:
+        return
+    url = "https://drive.google.com/uc?id=1nq7DCNJsm27z8nKdvFRxphUnokU41ZY6"
+    zip_path = data_dir / 'raw.zip'
+    gdown.download(url, str(zip_path), quiet=False)
+    subprocess.run(f'unzip "{str(zip_path)}" -d "{str(raw_dir)}"', shell=True, check=True)
+    zip_path.unlink()
 
 
 class ColonDataset(Dataset):
@@ -50,9 +99,9 @@ class ColonDataset(Dataset):
         lb_annot = annots.loc[annots['class'] == 'large_bowel']['segmentation'].item()
         sb_annot = annots.loc[annots['class'] == 'small_bowel']['segmentation'].item()
         st_annot = annots.loc[annots['class'] == 'stomach']['segmentation'].item()
-        lb_mask = torch.tensor(get_mask(img.shape, lb_annot))
-        sb_mask = torch.tensor(get_mask(img.shape, sb_annot))
-        st_mask = torch.tensor(get_mask(img.shape, st_annot))
+        lb_mask = torch.tensor(get_mask(img.shape, lb_annot), dtype=torch.float32)
+        sb_mask = torch.tensor(get_mask(img.shape, sb_annot), dtype=torch.float32)
+        st_mask = torch.tensor(get_mask(img.shape, st_annot), dtype=torch.float32)
 
         resizer = torchvision.transforms.Resize(size=(384, 384))
         img = resizer(img[None])

@@ -15,7 +15,7 @@ import lightning.pytorch as pl
 
 
 class Model(pl.LightningModule):
-    def __init__(self, args):
+    def __init__(self):
         super().__init__()
 
         self.internal = Unet(
@@ -38,7 +38,7 @@ class Model(pl.LightningModule):
             generator=torch.Generator().manual_seed(42)
         )
 
-        self.batch_size = 6
+        self.batch_size = 8
         self.lr = 1e-4
 
     def forward(self, x):
@@ -93,12 +93,16 @@ class Model(pl.LightningModule):
         self.log(f'test/time_saved_stomach', st_time, on_step=True, on_epoch=True)
 
         if batch_idx <= 10:
-            fig, ax = plt.subplots()  # type: plt.Figure, plt.Axes
-            img = np.stack([img.detach().cpu().numpy()[0, 0]] * 3, axis=-1)
-            img[..., 0] += lb_mask.detach().cpu().numpy()[0, 0]
-            img[..., 1] += sb_mask.detach().cpu().numpy()[0, 0]
-            img[..., 2] += st_mask.detach().cpu().numpy()[0, 0]
-            ax.imshow(img)
+            fig, (ax1, ax2) = plt.subplots(2, figsize=(20, 10))  # type: plt.Figure, plt.Axes
+            img1 = np.stack([img.detach().cpu().numpy()[0, 0]] * 3, axis=-1)
+            img1[..., 0] += pred[:, 0].detach().cpu().numpy()[0, 0]
+            img1[..., 1] += pred[:, 1].detach().cpu().numpy()[0, 0]
+            img1[..., 2] += pred[:, 2].detach().cpu().numpy()[0, 0]
+            ax1.imshow(img1)
+            img2 = np.stack([img.detach().cpu().numpy()[0, 0]] * 3, axis=-1)
+            img2[..., 0] += lb_mask.detach().cpu().numpy()[0, 0]
+            img2[..., 1] += sb_mask.detach().cpu().numpy()[0, 0]
+            img2[..., 2] += st_mask.detach().cpu().numpy()[0, 0]
             fig.savefig(out_dir / f'unet_{batch_idx}.png')
 
         return loss
@@ -144,12 +148,12 @@ def main(args):
     if args.checkpoint is not None:
         model = Model.load_from_checkpoint(args.checkpoint)
     else:
-        model = Model(args)
+        model = Model()
     trainer = pl.Trainer(
         log_every_n_steps=1,  # optimizer steps!
         max_epochs=5,
         deterministic=False,
-        accumulate_grad_batches=32,
+        accumulate_grad_batches=16,
         reload_dataloaders_every_n_epochs=1,
         logger=pl.loggers.TensorBoardLogger(out_dir),
     )

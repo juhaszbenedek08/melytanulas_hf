@@ -28,7 +28,6 @@ class Model(pl.LightningModule):
 
         self.loss_fn = torch.nn.BCEWithLogitsLoss()
         self.dice_score_fn = torchmetrics.Dice(zero_division=1)
-        self.dice_score_test = torchmetrics.Dice(num_classes=3, zero_division=1, average='none')
 
         self.dice_frequency = 32  # MUST be min accumulate_grad_batches and SHOULD be equal
 
@@ -81,10 +80,9 @@ class Model(pl.LightningModule):
         dice_score = self.dice_score_fn(pred, gt)
         self.log(f'{step}/dice_score', dice_score, on_step=True, on_epoch=True)
 
-        dice_score_classes = self.dice_score_test(pred, gt)
-        lb_time = 5 if dice_score_classes[0] > 0.8 else -2
-        sb_time = 3 if dice_score_classes[1] > 0.7 else -3
-        st_time = 2 if dice_score_classes[2] > 0.85 else -4
+        lb_time = 5 if self.dice_score_fn(pred[:, 0], gt[:, 0]) > 0.8 else -2
+        sb_time = 3 if self.dice_score_fn(pred[:, 1], gt[:, 1]) > 0.7 else -3
+        st_time = 2 if self.dice_score_fn(pred[:, 2], gt[:, 2]) > 0.85 else -4
         self.log(f'{step}/time_saved_large_bowel', lb_time, on_step=True, on_epoch=True)
         self.log(f'{step}/time_saved_small_bowel', sb_time, on_step=True, on_epoch=True)
         self.log(f'{step}/time_saved_stomach', st_time, on_step=True, on_epoch=True)

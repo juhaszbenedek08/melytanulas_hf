@@ -22,7 +22,7 @@ class Model(pl.LightningModule):
             in_channels=1,
             inter_channels=48,
             height=5,
-            width=2,  # TODO increase on colab to 2
+            width=2,
             class_num=3
         )
 
@@ -39,7 +39,7 @@ class Model(pl.LightningModule):
         )
 
         self.batch_size = 6
-        self.lr = 1e-4
+        self.lr = 1e-4 / 8
 
     def forward(self, x):
         return self.internal(x)
@@ -48,44 +48,49 @@ class Model(pl.LightningModule):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, eps=1e-7, weight_decay=1e-4)
         return optimizer
 
-    def step(self, batch, batch_idx, step):
+    def training_step(self, batch, batch_idx):
         img, lb_mask, sb_mask, st_mask = batch
         gt = torch.cat((lb_mask, sb_mask, st_mask), 1)
         pred_raw = self(img)
         loss = self.loss_fn(pred_raw, gt.float())
-        self.log(f'{step}/loss', loss, on_step=True, on_epoch=True)
+        self.log(f'train/loss', loss, on_step=True, on_epoch=True)
 
-        if step != 'train' or batch_idx % self.dice_frequency == 0:
+        if batch_idx % self.dice_frequency == 0:
             pred = torch.sigmoid(pred_raw)
             dice_score = self.dice_score_fn(pred, gt)
-            self.log(f'{step}/dice_score', dice_score, on_step=True, on_epoch=True)
+            self.log(f'train/dice_score', dice_score, on_step=True, on_epoch=True)
 
         return loss
 
-    def training_step(self, batch, batch_idx):
-        return self.step(batch, batch_idx, 'train')
-
     def validation_step(self, batch, batch_idx):
-        return self.step(batch, batch_idx, 'val')
-
-    def test_step(self, batch, batch_idx):
-        step = 'test'
         img, lb_mask, sb_mask, st_mask = batch
         gt = torch.cat((lb_mask, sb_mask, st_mask), 1)
         pred_raw = self(img)
         loss = self.loss_fn(pred_raw, gt.float())
-        self.log(f'{step}/loss', loss, on_step=True, on_epoch=True)
+        self.log(f'train/loss', loss, on_epoch=True)
+
+        if batch_idx % self.dice_frequency == 0:
+            pred = torch.sigmoid(pred_raw)
+            dice_score = self.dice_score_fn(pred, gt)
+            self.log(f'val/dice_score', dice_score, on_epoch=True)
+
+    def test_step(self, batch, batch_idx):
+        img, lb_mask, sb_mask, st_mask = batch
+        gt = torch.cat((lb_mask, sb_mask, st_mask), 1)
+        pred_raw = self(img)
+        loss = self.loss_fn(pred_raw, gt.float())
+        self.log(f'test/loss', loss, on_epoch=True)
 
         pred = torch.sigmoid(pred_raw)
         dice_score = self.dice_score_fn(pred, gt)
-        self.log(f'{step}/dice_score', dice_score, on_step=True, on_epoch=True)
+        self.log(f'test/dice_score', dice_score, on_epoch=True)
 
         lb_time = 5 if self.dice_score_fn(pred[:, 0], gt[:, 0]) > 0.8 else -2
         sb_time = 3 if self.dice_score_fn(pred[:, 1], gt[:, 1]) > 0.7 else -3
         st_time = 2 if self.dice_score_fn(pred[:, 2], gt[:, 2]) > 0.85 else -4
-        self.log(f'{step}/time_saved_large_bowel', lb_time, on_step=True, on_epoch=True)
-        self.log(f'{step}/time_saved_small_bowel', sb_time, on_step=True, on_epoch=True)
-        self.log(f'{step}/time_saved_stomach', st_time, on_step=True, on_epoch=True)
+        self.log(f'test/time_saved_large_bowel', lb_time, on_step=True, on_epoch=True)
+        self.log(f'test/time_saved_small_bowel', sb_time, on_step=True, on_epoch=True)
+        self.log(f'test/time_saved_stomach', st_time, on_step=True, on_epoch=True)
 
         if batch_idx <= 10:
             fig, ax = plt.subplots()  # type: plt.Figure, plt.Axes
@@ -126,25 +131,16 @@ class Model(pl.LightningModule):
     def configure_callbacks(self):
         return [
             pl.callbacks.ModelCheckpoint(
-                monitor='val_dice_score',
+                monitor='val/dice_score_epoch',
                 dirpath=out_dir,
-                filename='{epoch}-{step}-{val_dice_score:.2f}',
+                filename='{epoch}-{step}-{val/dice_score_epoch:.2f}',
                 save_top_k=3,
                 mode='min',
             ),
-            # pl.callbacks.EarlyStopping(
-            #     monitor='val_dice_score',
-            #     patience=10,
-            #     mode='max',
-            # ),
-            # pl.callbacks.LearningRateFinder(), # TODO
-            # pl.callbacks.StochasticWeightAveraging(), # TODO
-            # pl.callbacks.BatchSizeFinder(mode='bin_search')
         ]
 
 
 def main(args):
-    # TODO implement reload logic
     if args.checkpoint is not None:
         model = Model.load_from_checkpoint(args.checkpoint)
     else:

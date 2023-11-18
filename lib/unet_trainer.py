@@ -100,7 +100,7 @@ class Model(pl.LightningModule):
         self.log(f'test/time_saved_stomach', st_time, on_step=True, on_epoch=True)
 
         if batch_idx <= 10:
-            self.show_fig('test', img, lb_mask, sb_mask, st_mask, pred, batch_idx)
+            self.show_fig('test', img[0], lb_mask[0], sb_mask[0], st_mask[0], pred[0], batch_idx)
 
         return loss
 

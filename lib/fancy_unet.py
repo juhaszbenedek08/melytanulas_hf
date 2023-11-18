@@ -37,7 +37,7 @@ class HeadBlock(torch.nn.Module):
         self.conv3 = torch.nn.Conv2d(inter_channels, out_channels, 3, 1, 'same')
 
     def forward(self, x):
-        return torch.sigmoid(self.conv3(torch.relu(self.conv2(torch.relu(self.conv1(x))))))
+        return self.conv3(torch.relu(self.conv2(torch.relu(self.conv1(x)))))
 
 
 class Unet(torch.nn.Module):

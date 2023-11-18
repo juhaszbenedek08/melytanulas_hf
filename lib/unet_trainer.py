@@ -15,23 +15,20 @@ import lightning.pytorch as pl
 
 
 class Model(pl.LightningModule):
-    def __init__(self, model):
+    def __init__(self, args):
         super().__init__()
 
-        if model == 'unet':
-            self.internal = Unet(
-                in_channels=1,
-                inter_channels=48,
-                height=5,
-                width=1,
-                class_num=3
-            )
-        elif model == 'segfomer':
-            self.internal = segformer.get_model()
+        self.internal = Unet(
+            in_channels=1,
+            inter_channels=48,
+            height=5,
+            width=2,  # TODO increase on colab to 2
+            class_num=3
+        )
 
         self.loss_fn = torch.nn.BCEWithLogitsLoss()
         self.dice_score_fn = torchmetrics.Dice(zero_division=1)
-        self.dice_score_test = torchmetrics.Dice(num_classes=3, zero_division=1)
+        self.dice_score_test = torchmetrics.Dice(num_classes=3, zero_division=1, average='none')
 
         self.dice_frequency = 32  # MUST be min accumulate_grad_batches and SHOULD be equal
 
@@ -42,7 +39,7 @@ class Model(pl.LightningModule):
             generator=torch.Generator().manual_seed(42)
         )
 
-        self.batch_size = 4
+        self.batch_size = 6
         self.lr = 1e-4
 
     def forward(self, x):
@@ -92,20 +89,16 @@ class Model(pl.LightningModule):
         self.log(f'{step}/time_saved_small_bowel', sb_time, on_step=True, on_epoch=True)
         self.log(f'{step}/time_saved_stomach', st_time, on_step=True, on_epoch=True)
 
+        if batch_idx <= 10:
+            fig, ax = plt.subplots()  # type: plt.Figure, plt.Axes
+            img = np.stack([img.detach().cpu().numpy()[0, 0]] * 3, axis=-1)
+            img[..., 0] += lb_mask.detach().cpu().numpy()[0, 0]
+            img[..., 1] += sb_mask.detach().cpu().numpy()[0, 0]
+            img[..., 2] += st_mask.detach().cpu().numpy()[0, 0]
+            ax.imshow(img)
+            fig.savefig(out_dir / f'unet_{batch_idx}.png')
+
         return loss
-
-    def predict_step(self, batch, batch_idx, dataloader_idx=0):
-        img, lb_mask, sb_mask, st_mask = batch
-        gt = torch.cat((lb_mask, sb_mask, st_mask), 1)
-        pred_raw = self(img)
-
-        fig, ax = plt.subplots()  # type: plt.Figure, plt.Axes
-        img = np.stack([img.detach().cpu().numpy()[0, 0]] * 3, axis=-1)
-        img[..., 0] += lb_mask.detach().cpu().numpy()[0, 0]
-        img[..., 1] += sb_mask.detach().cpu().numpy()[0, 0]
-        img[..., 2] += st_mask.detach().cpu().numpy()[0, 0]
-        ax.imshow(img)
-        save_next(fig, f'pred_{batch_idx}', with_fig_num=False)
 
     def train_dataloader(self):
         return DataLoader(
@@ -141,22 +134,26 @@ class Model(pl.LightningModule):
                 save_top_k=3,
                 mode='min',
             ),
-            pl.callbacks.EarlyStopping(
-                monitor='val_dice_score',
-                patience=10,
-                mode='max',
-            ),
+            # pl.callbacks.EarlyStopping(
+            #     monitor='val_dice_score',
+            #     patience=10,
+            #     mode='max',
+            # ),
             # pl.callbacks.LearningRateFinder(), # TODO
             # pl.callbacks.StochasticWeightAveraging(), # TODO
-            # pl.callbacks.BatchSizeFinder(mode='bin_search') # TODO
+            # pl.callbacks.BatchSizeFinder(mode='bin_search')
         ]
 
 
-def main():
-    model = Model('unet')
+def main(args):
+    # TODO implement reload logic
+    if args.checkpoint is not None:
+        model = Model.load_from_checkpoint(args.checkpoint)
+    else:
+        model = Model(args)
     trainer = pl.Trainer(
         log_every_n_steps=1,  # optimizer steps!
-        max_epochs=50,
+        max_epochs=5,
         deterministic=False,
         accumulate_grad_batches=32,
         reload_dataloaders_every_n_epochs=1,

@@ -38,7 +38,7 @@ class Model(pl.LightningModule):
             generator=torch.Generator().manual_seed(42)
         )
 
-        self.batch_size = 8
+        self.batch_size = 6
         self.lr = 1e-4
 
     def forward(self, x):
@@ -95,9 +95,10 @@ class Model(pl.LightningModule):
         if batch_idx <= 10:
             fig, (ax1, ax2) = plt.subplots(2, figsize=(20, 10))  # type: plt.Figure, plt.Axes
             img1 = np.stack([img.detach().cpu().numpy()[0, 0]] * 3, axis=-1)
-            img1[..., 0] += pred[:, 0].detach().cpu().numpy()[0, 0]
-            img1[..., 1] += pred[:, 1].detach().cpu().numpy()[0, 0]
-            img1[..., 2] += pred[:, 2].detach().cpu().numpy()[0, 0]
+            pred = pred.detach().cpu().numpy()[0]
+            img1[..., 0] += pred[0, 0] * 100
+            img1[..., 1] += pred[0, 1] * 100
+            img1[..., 2] += pred[0, 2] * 100
             ax1.imshow(img1)
             img2 = np.stack([img.detach().cpu().numpy()[0, 0]] * 3, axis=-1)
             img2[..., 0] += lb_mask.detach().cpu().numpy()[0, 0]
@@ -157,5 +158,5 @@ def main(args):
         reload_dataloaders_every_n_epochs=1,
         logger=pl.loggers.TensorBoardLogger(out_dir),
     )
-    trainer.fit(model)
+    # trainer.fit(model)
     trainer.test(model)

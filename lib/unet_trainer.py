@@ -93,12 +93,12 @@ class Model(pl.LightningModule):
         self.log(f'test/time_saved_stomach', st_time, on_step=True, on_epoch=True)
 
         if batch_idx <= 10:
-            fig, (ax1, ax2) = plt.subplots(2, figsize=(20, 10))  # type: plt.Figure, plt.Axes
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
             img1 = np.stack([img.detach().cpu().numpy()[0, 0]] * 3, axis=-1)
             pred = pred.detach().cpu().numpy()[0]
-            img1[..., 0] += pred[0, 0] * 100
-            img1[..., 1] += pred[0, 1] * 100
-            img1[..., 2] += pred[0, 2] * 100
+            img1[..., 0] += pred[0, 0]
+            img1[..., 1] += pred[0, 1]
+            img1[..., 2] += pred[0, 2]
             ax1.imshow(img1)
             img2 = np.stack([img.detach().cpu().numpy()[0, 0]] * 3, axis=-1)
             img2[..., 0] += lb_mask.detach().cpu().numpy()[0, 0]

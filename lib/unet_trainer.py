@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
@@ -60,6 +62,9 @@ class Model(pl.LightningModule):
             dice_score = self.dice_score_fn(pred, gt)
             self.log(f'train/dice_score', dice_score, on_step=True, on_epoch=True)
 
+        if batch_idx % (self.dice_frequency * 20) == 0:
+            self.show_fig('train', img, lb_mask, sb_mask, st_mask, pred, batch_idx)
+
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -69,10 +74,12 @@ class Model(pl.LightningModule):
         loss = self.loss_fn(pred_raw, gt.float())
         self.log(f'train/loss', loss, on_epoch=True)
 
-        if batch_idx % self.dice_frequency == 0:
-            pred = torch.sigmoid(pred_raw)
-            dice_score = self.dice_score_fn(pred, gt)
-            self.log(f'val/dice_score', dice_score, on_epoch=True)
+        pred = torch.sigmoid(pred_raw)
+        dice_score = self.dice_score_fn(pred, gt)
+        self.log(f'val/dice_score', dice_score, on_epoch=True)
+
+        if batch_idx <= 10:
+            self.show_fig('val', img, lb_mask, sb_mask, st_mask, pred, batch_idx)
 
     def test_step(self, batch, batch_idx):
         img, lb_mask, sb_mask, st_mask = batch
@@ -93,21 +100,24 @@ class Model(pl.LightningModule):
         self.log(f'test/time_saved_stomach', st_time, on_step=True, on_epoch=True)
 
         if batch_idx <= 10:
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
-            img1 = np.stack([img.detach().cpu().numpy()[0, 0]] * 3, axis=-1)
-            pred = pred.detach().cpu().numpy()[0]
-            img1[..., 0] += pred[0, 0]
-            img1[..., 1] += pred[0, 1]
-            img1[..., 2] += pred[0, 2]
-            ax1.imshow(img1)
-            img2 = np.stack([img.detach().cpu().numpy()[0, 0]] * 3, axis=-1)
-            img2[..., 0] += lb_mask.detach().cpu().numpy()[0, 0]
-            img2[..., 1] += sb_mask.detach().cpu().numpy()[0, 0]
-            img2[..., 2] += st_mask.detach().cpu().numpy()[0, 0]
-            ax2.imshow(img2)
-            fig.savefig(out_dir / f'unet_{batch_idx}.png')
+            self.show_fig('test', img, lb_mask, sb_mask, st_mask, pred, batch_idx)
 
         return loss
+
+    def show_fig(self, phase, img, lb_mask, sb_mask, st_mask, pred, batch_idx):
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+        img1 = np.stack([img.detach().cpu().numpy()[0, 0]] * 3, axis=-1)
+        pred = pred.detach().cpu().numpy()[0]
+        img1[..., 0] += pred[0, 0]
+        img1[..., 1] += pred[0, 1]
+        img1[..., 2] += pred[0, 2]
+        ax1.imshow(img1)
+        img2 = np.stack([img.detach().cpu().numpy()[0, 0]] * 3, axis=-1)
+        img2[..., 0] += lb_mask.detach().cpu().numpy()[0, 0]
+        img2[..., 1] += sb_mask.detach().cpu().numpy()[0, 0]
+        img2[..., 2] += st_mask.detach().cpu().numpy()[0, 0]
+        ax2.imshow(img2)
+        fig.savefig(Path(self.logger.log_dir) / f'unet_{phase}_epoch{self.current_epoch}_{batch_idx}.png')
 
     def train_dataloader(self):
         return DataLoader(
@@ -137,11 +147,11 @@ class Model(pl.LightningModule):
     def configure_callbacks(self):
         return [
             pl.callbacks.ModelCheckpoint(
-                monitor='val/dice_score_epoch',
+                monitor='val/dice_score',
                 dirpath=out_dir,
-                filename='{epoch}-{step}-{val/dice_score_epoch:.2f}',
+                filename='{epoch}-{val/dice_score:.2f}',
                 save_top_k=3,
-                mode='min',
+                mode='max',
             ),
         ]
 

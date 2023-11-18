@@ -1,10 +1,14 @@
-import typing
-
-import torch
 import torchvision
 from types import MethodType
 
 from torchvision.models import VisionTransformer
+
+import torch
+from torch._C._profiler import ProfilerActivity
+from torch.autograd.profiler import record_function
+from torch.profiler import profile
+
+import fancy_unet
 
 
 class Printer(torch.nn.Module):
@@ -93,17 +97,36 @@ def convert_to_segmentation_model(model: VisionTransformer, output_channels: int
 
 def main():
     with torch.device('cuda'):
+        base_model = fancy_unet.Unet()
+
+        # Test
+        with profile(
+                activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+                profile_memory=True,
+                record_shapes=True
+        ) as prof:
+            with record_function("model_inference"):
+                example = torch.zeros((4, 1, 384, 384))
+                out = base_model(example)
+                loss = torch.nn.functional.mse_loss(out, torch.empty_like(out))
+                loss.backward()
+                print(loss.item())
+
+        print(prof.key_averages().table(sort_by="self_cuda_memory_usage", row_limit=10))
+
         base_model = get_base_model()
         print(base_model)
 
         model = insert_printers(base_model)
         example = torch.zeros((4, 3, 384, 384))
-        model(example)
+        out = model(example)
         # in 3 384 384
         # conv_proj 768 24 24
         # in encoder 576+1 768
         # heads output 768
 
+        out.sum().backward()
+
         model = convert_to_segmentation_model(base_model, 10)
         model = insert_printers(model)
-        model(example)
+        out = model(example)

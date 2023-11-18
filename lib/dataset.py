@@ -4,7 +4,7 @@ import gdown
 import numpy as np
 import torchvision
 from matplotlib import pyplot as plt
-from torch.utils.data import Dataset, dataset, random_split, DataLoader
+from torch.utils.data import Dataset, random_split, DataLoader
 import torch
 import pandas as pd
 from PIL import Image
@@ -41,8 +41,6 @@ def removeprefix(text, prefix):
 
 
 def download():
-    # Download
-
     if not data_dir.exists():
         data_dir.mkdir()
     if len(list(data_dir.iterdir())) > 0:
@@ -57,7 +55,7 @@ def download():
 class ColonDataset(Dataset):
 
     def __init__(self):
-        download()
+        # download()
 
         self.all_scans = [
             (
@@ -117,7 +115,10 @@ class ColonDataset(Dataset):
 
 
 def main():
-    ds = dataset.ColonDataset()
+    ds = ColonDataset()
+
+
+    print('Dataset length:', len(ds))
 
     train_data, val_data, test_data = random_split(
         ds,

@@ -4,3 +4,4 @@ numpy
 scikit-image
 pandas
 gdown
+lightning

@@ -4,8 +4,8 @@ export CODE_DIR="/media/jbl/Secondary SSD/melytanulas_hf/lib/"
 
 docker run \
   --gpus all \
-  -v "${DATA_DIR}:/data/" \
-  -v "${OUT_DIR}:/out/" \
+  -v "${DATA_DIR}:/data" \
+  -v "${OUT_DIR}:/out" \
   -v "${CODE_DIR}:/code" \
   melytanulas:latest \
   /bin/bash startup.sh

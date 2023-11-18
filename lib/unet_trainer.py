@@ -104,6 +104,7 @@ class Model(pl.LightningModule):
             img2[..., 0] += lb_mask.detach().cpu().numpy()[0, 0]
             img2[..., 1] += sb_mask.detach().cpu().numpy()[0, 0]
             img2[..., 2] += st_mask.detach().cpu().numpy()[0, 0]
+            ax2.imshow(img2)
             fig.savefig(out_dir / f'unet_{batch_idx}.png')
 
         return loss
@@ -158,5 +159,5 @@ def main(args):
         reload_dataloaders_every_n_epochs=1,
         logger=pl.loggers.TensorBoardLogger(out_dir),
     )
-    # trainer.fit(model)
+    trainer.fit(model)
     trainer.test(model)

@@ -1,4 +1,6 @@
 from pathlib import Path
+import segformer
+import lightning.pytorch as pl
 
 import numpy as np
 import torch
@@ -16,17 +18,11 @@ import torchmetrics
 import lightning.pytorch as pl
 
 
-class Model(pl.LightningModule):
-    def __init__(self):
+class BaseModel(pl.LightningModule):
+    def __init__(self, internal):
         super().__init__()
 
-        self.internal = Unet(
-            in_channels=1,
-            inter_channels=48,
-            height=5,
-            width=2,
-            class_num=3
-        )
+        self.internal = internal
 
         self.loss_fn = torch.nn.BCEWithLogitsLoss()
         self.dice_score_fn = torchmetrics.Dice(zero_division=1)
@@ -40,15 +36,8 @@ class Model(pl.LightningModule):
             generator=torch.Generator().manual_seed(42)
         )
 
-        self.batch_size = 6
-        self.lr = 1e-4
-
     def forward(self, x):
         return self.internal(x)
-
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, eps=1e-7, weight_decay=1e-4)
-        return optimizer
 
     def training_step(self, batch, batch_idx):
         img, lb_mask, sb_mask, st_mask = batch
@@ -62,7 +51,7 @@ class Model(pl.LightningModule):
             dice_score = self.dice_score_fn(pred, gt)
             self.log(f'train/dice_score', dice_score, on_step=True, on_epoch=True)
 
-        if batch_idx % (self.dice_frequency * 20) == 0:
+        if batch_idx % (self.dice_frequency * 10) == 0:
             self.show_fig('train', img, lb_mask, sb_mask, st_mask, pred, batch_idx)
 
         return loss
@@ -107,7 +96,7 @@ class Model(pl.LightningModule):
     def show_fig(self, phase, img, lb_mask, sb_mask, st_mask, pred, batch_idx):
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
         img1 = np.stack([img.detach().cpu().numpy()[0, 0]] * 3, axis=-1)
-        pred = pred.detach().cpu().numpy()[0]
+        pred = pred.detach().cpu().numpy()
         img1[..., 0] += pred[0, 0]
         img1[..., 1] += pred[0, 1]
         img1[..., 2] += pred[0, 2]
@@ -148,7 +137,6 @@ class Model(pl.LightningModule):
         return [
             pl.callbacks.ModelCheckpoint(
                 monitor='val/dice_score',
-                dirpath=out_dir,
                 filename='{epoch}-{val/dice_score:.2f}',
                 save_top_k=3,
                 mode='max',
@@ -156,18 +144,63 @@ class Model(pl.LightningModule):
         ]
 
 
+class UNetModel(BaseModel):
+    def __init__(self):
+        super().__init__(Unet(
+            in_channels=1,
+            inter_channels=48,
+            height=5,
+            width=2,
+            class_num=3
+        ))
+
+        self.batch_size = 6
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4, eps=1e-7, weight_decay=1e-4)
+        return optimizer
+
+    def forward(self, x):
+        return self.internal(x)
+
+
+class SegformerModel(BaseModel):
+    def __init__(self):
+        super().__init__(segformer.get_model())
+
+        self.batch_size = 4
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4, eps=1e-7, weight_decay=1e-4)
+        return optimizer
+
+    def forward(self, x):
+        x = torch.cat([x] * 3, dim=1)
+        x = self.internal(x)[0]
+        x = torch.functional.F.interpolate(x, size=(384, 384), mode='bilinear')
+        return self.internal(x)
+
+
 def main(args):
+    if args.model == 'unet':
+        Model = UNetModel
+    elif args.model == 'segformer':
+        Model = SegformerModel
+    else:
+        raise ValueError(f'Unknown model: {args.model}')
+
     if args.checkpoint is not None:
         model = Model.load_from_checkpoint(args.checkpoint)
     else:
         model = Model()
     trainer = pl.Trainer(
+        default_root_dir=out_dir,
         log_every_n_steps=1,  # optimizer steps!
-        max_epochs=5,
+        max_epochs=3,
         deterministic=False,
         accumulate_grad_batches=16,
         reload_dataloaders_every_n_epochs=1,
-        logger=pl.loggers.TensorBoardLogger(out_dir),
+        logger=pl.loggers.TensorBoardLogger(),
     )
     trainer.fit(model)
     trainer.test(model)

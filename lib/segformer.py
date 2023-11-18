@@ -5,15 +5,6 @@ from torch import nn
 
 import numpy as np
 
-class Adapter(torch.nn.Module):
-    def __init__(self, internal):
-        super().__init__()
-        self.internal = internal
-
-    def forward(self, x):
-        return self.internal(x[1])
-
-
 def get_model():
     # id2label = ...
 
@@ -34,6 +25,8 @@ if __name__ == "__main__":
     img = torch.zeros(1,3,384,384)
     model = get_model()
     out = model(img)
+    print(model)
+    print(out)
 
 # sgformer = SegformerForSemanticSegmentation.from_pretrained()
 #

@@ -1,4 +1,3 @@
-import pytorch_lightning as pl
 from transformers import SegformerForSemanticSegmentation
 
 import torch
@@ -6,9 +5,9 @@ from torch import nn
 
 import numpy as np
 
-
 class Adapter(torch.nn.Module):
     def __init__(self, internal):
+        super().__init__()
         self.internal = internal
 
     def forward(self, x):
@@ -29,9 +28,12 @@ def get_model():
         ignore_mismatched_sizes=True,
     )
 
-    model = Adapter(model)
-
     return model
+
+if __name__ == "__main__":
+    img = torch.zeros(1,3,384,384)
+    model = get_model()
+    out = model(img)
 
 # sgformer = SegformerForSemanticSegmentation.from_pretrained()
 #

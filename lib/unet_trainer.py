@@ -179,7 +179,7 @@ class SegformerModel(BaseModel):
         x = torch.cat([x] * 3, dim=1)
         x = self.internal(x)[0]
         x = torch.functional.F.interpolate(x, size=(384, 384), mode='bilinear')
-        return self.internal(x)
+        return x
 
 
 def main(args):

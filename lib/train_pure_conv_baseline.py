@@ -32,7 +32,8 @@ class BaselineModel(pl.LightningModule):
             self.internal = internal
 
         self.loss_fn = torch.nn.BCEWithLogitsLoss()
-        self.dice_score_fn = torchmetrics.Dice()
+        self.dice_score_fn = torchmetrics.Dice(zero_division=1)
+        self.dice_score_test = torchmetrics.Dice(num_classes=3, zero_division=1)
 
         self.dice_frequency = 32 # MUST be min accumulate_grad_batches and SHOULD be equal
 
@@ -74,7 +75,26 @@ class BaselineModel(pl.LightningModule):
         return self.step(batch, batch_idx, 'val')
 
     def test_step(self, batch, batch_idx):
-        return self.step(batch, batch_idx, 'test')
+        step = 'test'
+        img, lb_mask, sb_mask, st_mask = batch
+        gt = torch.cat((lb_mask, sb_mask, st_mask), 1)
+        pred_raw = self(img)
+        loss = self.loss_fn(pred_raw, gt.float())
+        self.log(f'{step}/loss', loss, on_step=True, on_epoch=True)
+
+        pred = torch.sigmoid(pred_raw)
+        dice_score = self.dice_score_fn(pred, gt)
+        self.log(f'{step}/dice_score', dice_score, on_step=True, on_epoch=True)
+
+        dice_score_classes = self.dice_score_test(pred, gt)
+        lb_time = 5 if dice_score_classes[0] > 0.8 else -2
+        sb_time = 3 if dice_score_classes[1] > 0.7 else -3
+        st_time = 2 if dice_score_classes[2] > 0.85 else -4
+        self.log(f'{step}/time_saved_large_bowel', lb_time, on_step=True, on_epoch=True)
+        self.log(f'{step}/time_saved_small_bowel', sb_time, on_step=True, on_epoch=True)
+        self.log(f'{step}/time_saved_stomach', st_time, on_step=True, on_epoch=True)
+
+        return loss
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         img, lb_mask, sb_mask, st_mask = batch
@@ -107,7 +127,7 @@ class BaselineModel(pl.LightningModule):
     def test_dataloader(self):
         return DataLoader(
             self.test_data,
-            batch_size=self.batch_size,
+            batch_size=1,
             num_workers=1,
         )
 

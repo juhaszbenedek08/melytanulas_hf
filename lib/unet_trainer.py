@@ -137,6 +137,7 @@ class BaseModel(pl.LightningModule):
         return [
             pl.callbacks.ModelCheckpoint(
                 monitor='val/dice_score',
+                dirpath=self.logger.log_dir,
                 filename='{epoch}-{val/dice_score:.2f}',
                 save_top_k=3,
                 mode='max',
@@ -194,13 +195,12 @@ def main(args):
     else:
         model = Model()
     trainer = pl.Trainer(
-        default_root_dir=out_dir,
         log_every_n_steps=1,  # optimizer steps!
         max_epochs=3,
         deterministic=False,
         accumulate_grad_batches=16,
         reload_dataloaders_every_n_epochs=1,
-        logger=pl.loggers.TensorBoardLogger(),
+        logger=pl.loggers.TensorBoardLogger(out_dir),
     )
     trainer.fit(model)
     trainer.test(model)

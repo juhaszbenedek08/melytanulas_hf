@@ -19,7 +19,7 @@ class Model(pl.LightningModule):
         super().__init__()
 
         if model == 'unet':
-            internal = Unet(
+            self.internal = Unet(
                 in_channels=1,
                 inter_channels=48,
                 height=5,
@@ -27,15 +27,7 @@ class Model(pl.LightningModule):
                 class_num=3
             )
         elif model == 'segfomer':
-            internal = segformer.get_model()
-
-        if True:
-            try:
-                self.internal = torch.compile(internal, mode='default')
-            except:
-                self.internal = internal
-        else:
-            self.internal = internal
+            self.internal = segformer.get_model()
 
         self.loss_fn = torch.nn.BCEWithLogitsLoss()
         self.dice_score_fn = torchmetrics.Dice(zero_division=1)

@@ -1,4 +1,3 @@
-import pytorch_lightning as pl
 from transformers import SegformerForSemanticSegmentation
 
 import torch

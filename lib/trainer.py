@@ -2,6 +2,8 @@ import numpy as np
 import torch
 from matplotlib import pyplot as plt
 from torch.utils.data import DataLoader, random_split
+
+import segformer
 from fancy_unet import Unet
 import torch.utils.data
 from dataset import ColonDataset
@@ -12,17 +14,21 @@ import torchmetrics
 import lightning.pytorch as pl
 
 
-class BaselineModel(pl.LightningModule):
-    def __init__(self):
+class Model(pl.LightningModule):
+    def __init__(self, model):
         super().__init__()
 
-        internal = Unet(
-            in_channels=1,
-            inter_channels=48,
-            height=5,
-            width=1,
-            class_num=3
-        )
+        if model == 'unet':
+            internal = Unet(
+                in_channels=1,
+                inter_channels=48,
+                height=5,
+                width=1,
+                class_num=3
+            )
+        elif model == 'segfomer':
+            internal = segformer.get_model()
+
         if True:
             try:
                 self.internal = torch.compile(internal, mode='default')
@@ -35,7 +41,7 @@ class BaselineModel(pl.LightningModule):
         self.dice_score_fn = torchmetrics.Dice(zero_division=1)
         self.dice_score_test = torchmetrics.Dice(num_classes=3, zero_division=1)
 
-        self.dice_frequency = 32 # MUST be min accumulate_grad_batches and SHOULD be equal
+        self.dice_frequency = 32  # MUST be min accumulate_grad_batches and SHOULD be equal
 
         self.dataset = ColonDataset()
         self.train_data, self.val_data, self.test_data = random_split(
@@ -155,7 +161,7 @@ class BaselineModel(pl.LightningModule):
 
 
 def main():
-    model = BaselineModel()
+    model = Model('unet')
     trainer = pl.Trainer(
         log_every_n_steps=1,  # optimizer steps!
         max_epochs=50,

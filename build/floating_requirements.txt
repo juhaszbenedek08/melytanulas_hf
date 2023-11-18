@@ -6,3 +6,5 @@ pandas
 gdown
 lightning
 tensorboard
+torchvision
+transformers

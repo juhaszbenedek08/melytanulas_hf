@@ -1,6 +1,5 @@
 import pytorch_lightning as pl
 from transformers import SegformerForSemanticSegmentation
-from datasets import load_metric
 
 import torch
 from torch import nn
@@ -8,19 +7,31 @@ from torch import nn
 import numpy as np
 
 
-def getmodel():
+class Adapter(torch.nn.Module):
+    def __init__(self, internal):
+        self.internal = internal
+
+    def forward(self, x):
+        return self.internal(x[1])
+
+
+def get_model():
+    # id2label = ...
+
+    # label2id = {v: k for k, v in id2label.items()}
 
     model = SegformerForSemanticSegmentation.from_pretrained(
         "nvidia/segformer-b0-finetuned-ade-512-512",
         return_dict=False,
         num_labels=3,
-        id2label=self.id2label,
-        label2id=self.label2id,
+        # id2label=id2label,
+        # label2id=label2id,
         ignore_mismatched_sizes=True,
     )
 
-    return model
+    model = Adapter(model)
 
+    return model
 
 # sgformer = SegformerForSemanticSegmentation.from_pretrained()
 #

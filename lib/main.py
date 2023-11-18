@@ -1,6 +1,6 @@
 import torch
 
-import train_pure_conv_baseline
+import trainer
 from dataset import ColonDataset
 
 def main():
@@ -8,7 +8,7 @@ def main():
 
     # dataset.main()
 
-    train_pure_conv_baseline.main()
+    trainer.main()
 
     # segmentation_vit.main()
 

@@ -7,7 +7,7 @@ import argparse
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--load', type=str, default=None)
+    ap.add_argument('--checkpoint', type=str, default=None)
     args = ap.parse_args()
 
     print(torch.cuda.is_available())

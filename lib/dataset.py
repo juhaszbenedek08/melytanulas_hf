@@ -54,24 +54,44 @@ def download():
 
 class ColonDataset(Dataset):
 
-    def __init__(self):
-        # download()
+    @staticmethod
+    def get_case_id(day_dir, scan_path):
+        slice_num = str(scan_path.name.split('_')[1])
 
-        self.all_scans = [
-            (
-                str(removeprefix(case_dir.name, 'case')),
-                str(removeprefix(day_dir.name, f'{case_dir.name}_day')),
-                str(scan_path.name.split('_')[1]),
-                scan_path
-            )
+        return f"{day_dir.name}_slice_{slice_num}"
+
+    def __init__(self):
+
+        self.annots = pd.read_csv(
+            csv_path,
+            dtype={'id': str, 'class': str, 'segmentation': str},
+        ).fillna('').pivot(
+            index='id',
+            columns='class',
+            values='segmentation'
+        ).reset_index()
+        self.annots = self.annots[
+            (self.annots['large_bowel'] != '')
+            | (self.annots['small_bowel'] != '')
+            | (self.annots['stomach'] != '')
+            ]
+
+        all_scans = {
+            self.get_case_id(day_dir, scan_path): str(scan_path)
             for case_dir in raw_dir.iterdir()
             for day_dir in case_dir.iterdir()
             for scan_path in (day_dir / 'scans').iterdir()
-        ]
-        self.annots = pd.read_csv(
-            csv_path,
-            dtype={'id': str, 'class': str, 'segmentation': str}
-        ).fillna('')
+        }
+        self.annots['path'] = self.annots['id'].map(all_scans)
+
+        print(self.annots)
+
+        self.size = (384, 384)
+        self.img_resizer = torchvision.transforms.Resize(size=self.size)
+        self.mask_resizer = torchvision.transforms.Resize(
+            size=self.size,
+            interpolation=torchvision.transforms.InterpolationMode.NEAREST
+        )
 
     def normalize(self, img):
         intensities = torch.flatten(img)
@@ -85,38 +105,32 @@ class ColonDataset(Dataset):
         return img
 
     def __len__(self):
-        return len(self.all_scans)
+        return len(self.annots)
+
+    def mask_from(self, img, row, column):
+        return self.mask_resizer(
+            torch.tensor(
+                get_mask(
+                    img.shape,
+                    row[column]
+                ),
+                dtype=torch.int)[None]
+        )
 
     def __getitem__(self, item):
-        scan = self.all_scans[item]
-        fname = str(scan[3])
-        img = self.normalize(torch.tensor(np.array(Image.open(fname))))
+        row = self.annots.iloc[item, :]
+        img = self.normalize(torch.tensor(np.array(Image.open(row['path']))))
 
-        # fig, ax = plt.subplots()
-        # ax.imshow(img)
-        # fig.show()
-
-        annotname = f"case{scan[0]}_day{scan[1]}_slice_{scan[2]}"
-        annots = self.annots.loc[self.annots['id'] == annotname]
-        lb_annot = annots.loc[annots['class'] == 'large_bowel']['segmentation'].item()
-        sb_annot = annots.loc[annots['class'] == 'small_bowel']['segmentation'].item()
-        st_annot = annots.loc[annots['class'] == 'stomach']['segmentation'].item()
-        lb_mask = torch.tensor(get_mask(img.shape, lb_annot), dtype=torch.float32)
-        sb_mask = torch.tensor(get_mask(img.shape, sb_annot), dtype=torch.float32)
-        st_mask = torch.tensor(get_mask(img.shape, st_annot), dtype=torch.float32)
-
-        resizer = torchvision.transforms.Resize(size=(384, 384))
-        img = resizer(img[None])
-        lb_mask = resizer(lb_mask[None])
-        sb_mask = resizer(sb_mask[None])
-        st_mask = resizer(st_mask[None])
+        lb_mask = self.mask_from(img, row, 'large_bowel')
+        sb_mask = self.mask_from(img, row, 'small_bowel')
+        st_mask = self.mask_from(img, row, 'stomach')
+        img = self.img_resizer(img[None])
 
         return img, lb_mask, sb_mask, st_mask
 
 
 def main():
     ds = ColonDataset()
-
 
     print('Dataset length:', len(ds))
 

@@ -67,10 +67,9 @@ class Unet(torch.nn.Module):
 
         self.head = torch.nn.Conv2d(decChannels[-1], nbClasses, 1, 1)
         self.outsize = outSize
-        self.sigmoid = torch.nn.Sigmoid()
 
     def forward(self, x):
         x = self.Encoder(x)
         x = self.Decoder(x[::-1][0], x[::-1][1:])
         x = self.head(x)
-        return self.sigmoid(x)
+        return x

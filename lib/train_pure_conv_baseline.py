@@ -9,23 +9,32 @@ from path_util import out_dir
 from plot_util import save_next
 
 import torchmetrics
-import lighting.pytorch as pl
+import lightning.pytorch as pl
 
 
-class BaselineModel(torch.nn.Module, pl.LightningModule):  # DEBUG
+class BaselineModel(pl.LightningModule):
     def __init__(self):
         super().__init__()
-        self.unet = Unet(
+
+        internal = Unet(
             in_channels=1,
             inter_channels=48,
             height=5,
             width=1,
             class_num=3
         )
-        self.loss_fn = torch.nn.BCELoss() # THINK
+        if True:
+            try:
+                self.internal = torch.compile(internal, mode='default')
+            except:
+                self.internal = internal
+        else:
+            self.internal = internal
+
+        self.loss_fn = torch.nn.BCEWithLogitsLoss()
         self.dice_score_fn = torchmetrics.Dice()
 
-        self.dice_frequency = 100
+        self.dice_frequency = 32 # MUST be min accumulate_grad_batches and SHOULD be equal
 
         self.dataset = ColonDataset()
         self.train_data, self.val_data, self.test_data = random_split(
@@ -38,51 +47,39 @@ class BaselineModel(torch.nn.Module, pl.LightningModule):  # DEBUG
         self.lr = 1e-4
 
     def forward(self, x):
-        return self.unet(x)
+        return self.internal(x)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, eps=1e-7, weight_decay=1e-4)
         return optimizer
 
-    def training_step(self, batch, batch_idx):
+    def step(self, batch, batch_idx, step):
         img, lb_mask, sb_mask, st_mask = batch
         gt = torch.cat((lb_mask, sb_mask, st_mask), 1)
-        pred = self(img)
-        loss = self.loss_fn(pred, gt)
-        self.log('train_loss', loss, on_step=True, on_epoch=True)
+        pred_raw = self(img)
+        loss = self.loss_fn(pred_raw, gt.float())
+        self.log(f'{step}/loss', loss, on_step=True, on_epoch=True)
 
-        if batch_idx % self.dice_frequency == 0:
+        if step != 'train' or batch_idx % self.dice_frequency == 0:
+            pred = torch.sigmoid(pred_raw)
             dice_score = self.dice_score_fn(pred, gt)
-            self.log('train_dice_score', dice_score, on_step=True, on_epoch=True)
+            self.log(f'{step}/dice_score', dice_score, on_step=True, on_epoch=True)
 
         return loss
 
+    def training_step(self, batch, batch_idx):
+        return self.step(batch, batch_idx, 'train')
+
     def validation_step(self, batch, batch_idx):
-        img, lb_mask, sb_mask, st_mask = batch
-        gt = torch.cat((lb_mask, sb_mask, st_mask), 1)
-        pred = self(img)
-        loss = self.loss_fn(pred, gt)
-        self.log('val_loss', loss, on_step=True, on_epoch=True)
-        dice_score = self.dice_score_fn(pred, gt)
-        self.log('val_dice_score', dice_score, on_step=True, on_epoch=True)
+        return self.step(batch, batch_idx, 'val')
 
     def test_step(self, batch, batch_idx):
-        img, lb_mask, sb_mask, st_mask = batch
-        gt = torch.cat((lb_mask, sb_mask, st_mask), 1)
-        pred = self(img)
-        loss = self.loss_fn(pred, gt)
-        self.log('test_loss', loss, on_step=True, on_epoch=True)
-        dice_score = self.dice_score_fn(pred, gt)
-        self.log('test_dice_score', dice_score, on_step=True, on_epoch=True)
+        return self.step(batch, batch_idx, 'test')
 
-    def predict_step(self, batch, batch_idx, dataloader_idx=None):
+    def predict_step(self, batch, batch_idx, dataloader_idx=0):
         img, lb_mask, sb_mask, st_mask = batch
         gt = torch.cat((lb_mask, sb_mask, st_mask), 1)
-        pred = self(img)
-        loss = self.loss_fn(pred, gt)
-        self.log('predict_loss', loss, on_step=True, on_epoch=True) # TODO
-        dice_score = self.dice_score_fn(pred, gt)
-        self.log('predict_dice_score', dice_score, on_step=True, on_epoch=True) # TODO
+        pred_raw = self(img)
 
         fig, ax = plt.subplots()  # type: plt.Figure, plt.Axes
         img = np.stack([img.detach().cpu().numpy()[0, 0]] * 3, axis=-1)
@@ -92,24 +89,30 @@ class BaselineModel(torch.nn.Module, pl.LightningModule):  # DEBUG
         ax.imshow(img)
         save_next(fig, f'pred_{batch_idx}', with_fig_num=False)
 
-
-def train_dataloader(self):
-        return DataLoader(self.train_data, batch_size=self.batch_size, shuffle=True)
+    def train_dataloader(self):
+        return DataLoader(
+            self.train_data,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=1,
+        )
 
     def val_dataloader(self):
-        sample_val_data, _ = random_split(
+        return DataLoader(
             self.val_data,
-            [0.1, 0.9],
-            generator=torch.Generator().manual_seed(self.current_epoch)
+            batch_size=self.batch_size,
+            num_workers=1,
         )
-        return DataLoader(self.val_data, batch_size=self.batch_size, shuffle=True)
 
     def test_dataloader(self):
-        return DataLoader(self.test_data, batch_size=self.batch_size, shuffle=True)
+        return DataLoader(
+            self.test_data,
+            batch_size=self.batch_size,
+            num_workers=1,
+        )
 
     def optimizer_zero_grad(self, epoch, batch_idx, optimizer):
         optimizer.zero_grad(set_to_none=True)
-
 
     def configure_callbacks(self):
         return [
@@ -130,17 +133,16 @@ def train_dataloader(self):
             # pl.callbacks.BatchSizeFinder(mode='bin_search') # TODO
         ]
 
+
 def main():
     model = BaselineModel()
     trainer = pl.Trainer(
-        precision='16-mixed',
-        log_every_n_steps=10,
+        log_every_n_steps=1,  # optimizer steps!
         max_epochs=50,
         deterministic=False,
         accumulate_grad_batches=32,
-        reload_dataloaders_every_epoch=True,
+        reload_dataloaders_every_n_epochs=1,
         logger=pl.loggers.TensorBoardLogger(out_dir),
-
     )
     trainer.fit(model)
     trainer.test(model)

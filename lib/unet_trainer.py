@@ -39,7 +39,7 @@ class Model(pl.LightningModule):
         )
 
         self.batch_size = 6
-        self.lr = 1e-4 / 8
+        self.lr = 1e-4
 
     def forward(self, x):
         return self.internal(x)

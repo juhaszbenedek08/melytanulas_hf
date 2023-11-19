@@ -199,7 +199,7 @@ def main(args):
         log_every_n_steps=1,  # optimizer steps!
         max_epochs=10,
         deterministic=False,
-        accumulate_grad_batches=16 if args.model == 'unet' else 6,
+        accumulate_grad_batches=16,
         reload_dataloaders_every_n_epochs=1,
         logger=pl.loggers.TensorBoardLogger(out_dir),
     )

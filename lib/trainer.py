@@ -155,7 +155,7 @@ class UNetModel(BaseModel):
             class_num=3
         ))
 
-        self.batch_size = 16
+        self.batch_size = 6
 
         self.name = 'unet'
 
@@ -171,7 +171,7 @@ class SegformerModel(BaseModel):
     def __init__(self):
         super().__init__(segformer.get_model())
 
-        self.batch_size = 4
+        self.batch_size = 16
 
         self.name = 'segformer'
 

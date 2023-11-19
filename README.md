@@ -61,10 +61,11 @@ Note that the raw data contains the CT scans as png images, and the segmentation
 
 The current version provides the script to create the containerized environment in build/build_runner.sh.
 If you want to use the most important packages with fixed version, edit the build/Dockerfile to use the freezed_requirements.txt.
-You can use this environment to run the preprocessing script, by running the build/run.sh file.
+You can use this environment to run the training/testing script, by running the build/run.sh file.
 The required mounts should be added to the container before running: use absolute paths to these folders.
 
 The lib/main.py serves as the entry point of the program.
+You can train or evaluate the models by running this file.
 If you wish to run the training with different settings,
 you can change the passed arguments in the build/startup.sh file, or in colab the main.ipynb file,
 as well as changing any of the scripts in the lib folder.
@@ -110,50 +111,65 @@ The vision transformer:
 
 # Preliminary results (see code for parameters of training)
 
-| Model     | Test Dice | Time Saved Large Bowel | Time Saved Small Bowel | Time Saved Stomach |
-|-----------|-----------|------------------------|------------------------|--------------------| 
-| FancyUnet | 0.000     | 0.000                  |                        |                    |
-| Segformer | 0.000     | 0.000                  |                        |                    |
+| Model                | Dice Score | BCELoss | Average Time Saved - Large Bowel | Average Time Saved -  Saved Small Bowel | Average Time Saved - Saved Stomach |
+|----------------------|------------|---------|----------------------------------|-----------------------------------------|------------------------------------| 
+| Segformer            | 0.67       | 0.039   | 1.19                             | -0.22                                   | -0.33                              |
+| FancyUnet (baseline) | 0.67       | 0.019   | 1.85                             | -0.38                                   | -0.35                              |
 
+Our 'complex' evaluation metric approximates the time saved by the radiologist using our network.
+If the dice score of a picture is above a certain threshold (see lib/trainer.py),
+then we assume that the radiologist would not have to check the segmentation of that picture,
+however if the dice score is below the threshold,
+then the radiologist would have to spend extra time on checking that picture.
 
-## Test images
+# Example Gallery
+
+> ### Color labels
+>
+> *RED* : Large bowel
+>
+> *GREEN* : Small bowel
+>
+> *BLUE* : Stomach
+
+## Slices from the dataset
+
+<table>
+  <tr>
+    <td><img src="assets/readme/segmentation1.png" width=400 ></td>
+    <td><img src="assets/readme/segmentation2.png" width=400 ></td>
+    <td><img src="assets/readme/segmentation3.png" width=400 ></td>
+  </tr>
+ </table>
+
+## Preliminary test images
+
+Prediction - Ground truth
 
 ### FancyUnet
 
 <table>
-  <tr>
-    <td><img src="assets/readme/fancyunet1.png" width=260 ></td>
-    <td><img src="assets/readme/fancyunet2.png" width=260 ></td>
-    <td><img src="assets/readme/fancyunet3.png" width=260 ></td>
-  </tr>
+   <tr>
+      <td><img src="assets/readme/fancyunet1.png" width=800 ></td>
+   </tr>
+   <tr>
+      <td><img src="assets/readme/fancyunet2.png" width=800 ></td>
+    </tr>
+    <tr>
+      <td><img src="assets/readme/fancyunet3.png" width=800 ></td>
+    </tr>
  </table>
 
 ### Segformer
 
 <table>
-  <tr>
-    <td><img src="assets/readme/segformer1.png" width=260 ></td>
-    <td><img src="assets/readme/segformer2.png" width=260 ></td>
-    <td><img src="assets/readme/segformer3.png" width=260 ></td>
-  </tr>
- </table>
-
-# Example Gallery
-
-## Slices from the dataset
-
-> ### Color labels
-> 
-> *RED* : Large bowel
-> 
-> *GREEN* : Small bowel
-> 
-> *BLUE* : Stomach
-
-<table>
-  <tr>
-    <td><img src="assets/readme/segmentation1.png" width=260 ></td>
-    <td><img src="assets/readme/segmentation2.png" width=260 ></td>
-    <td><img src="assets/readme/segmentation3.png" width=260 ></td>
-  </tr>
+   <tr>
+      <td><img src="assets/readme/segformer1.png" width=800 ></td>
+   </tr>
+   <tr>
+      <td><img src="assets/readme/segformer2.png" width=800 ></td>
+    </tr>
+    <tr>
+      <td><img src="assets/readme/segformer3.png" width=800 ></td>
+    </tr>
  </table>

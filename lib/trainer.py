@@ -135,7 +135,6 @@ class BaseModel(pl.LightningModule):
             pl.callbacks.ModelCheckpoint(
                 monitor='val/dice_score',
                 dirpath=self.logger.log_dir,
-                filename='{epoch}-{val/dice_score:.2f}',
                 save_top_k=3,
                 mode='max',
             ),

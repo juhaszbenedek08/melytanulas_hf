@@ -1,3 +1,5 @@
+# For easily running the container
+
 export DATA_DIR="/media/jbl/Secondary SSD/melytanulas_hf/data/"
 export OUT_DIR="/media/jbl/Secondary SSD/melytanulas_hf/out/"
 export CODE_DIR="/media/jbl/Secondary SSD/melytanulas_hf/lib/"

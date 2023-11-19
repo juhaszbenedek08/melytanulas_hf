@@ -9,6 +9,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--checkpoint', type=str, default=None)
     ap.add_argument('--model', type=str, default='unet')
+    ap.add_argument('--only_test', action='store_true', default=False)
     args = ap.parse_args()
 
     print(torch.cuda.is_available())
@@ -16,8 +17,6 @@ def main():
     # dataset.main()
 
     trainer.main(args)
-
-    # segmentation_vit.main()
 
 
 if __name__ == '__main__':

@@ -203,5 +203,6 @@ def main(args):
         reload_dataloaders_every_n_epochs=1,
         logger=pl.loggers.TensorBoardLogger(out_dir),
     )
-    trainer.fit(model)
+    if not args.only_test:
+        trainer.fit(model)
     trainer.test(model)

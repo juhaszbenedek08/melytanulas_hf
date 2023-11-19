@@ -110,21 +110,21 @@ class BaseModel(pl.LightningModule):
             self.train_data,
             batch_size=self.batch_size,
             shuffle=True,
-            num_workers=1,
+            num_workers=3,
         )
 
     def val_dataloader(self):
         return DataLoader(
             self.val_data,
             batch_size=self.batch_size,
-            num_workers=1,
+            num_workers=3,
         )
 
     def test_dataloader(self):
         return DataLoader(
             self.test_data,
             batch_size=1,
-            num_workers=1,
+            num_workers=3,
         )
 
     def optimizer_zero_grad(self, epoch, batch_idx, optimizer):
@@ -168,7 +168,7 @@ class SegformerModel(BaseModel):
     def __init__(self):
         super().__init__(segformer.get_model())
 
-        self.batch_size = 6
+        self.batch_size = 12
 
         self.name = 'segformer'
 

@@ -1,6 +1,6 @@
 import torch
 
-import unet_trainer
+import trainer
 from dataset import ColonDataset
 import argparse
 
@@ -15,11 +15,9 @@ def main():
 
     # dataset.main()
 
-    unet_trainer.main(args)
+    trainer.main(args)
 
     # segmentation_vit.main()
-
-    # return
 
 
 if __name__ == '__main__':

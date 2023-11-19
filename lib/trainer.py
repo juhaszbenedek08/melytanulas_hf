@@ -106,7 +106,7 @@ class BaseModel(pl.LightningModule):
         img2[..., 1] += sb_mask.detach().cpu().numpy()[0, 0]
         img2[..., 2] += st_mask.detach().cpu().numpy()[0, 0]
         ax2.imshow(img2)
-        fig.savefig(Path(self.logger.log_dir) / f'unet_{phase}_epoch{self.current_epoch}_{batch_idx}.png')
+        fig.savefig(Path(self.logger.log_dir) / f'{self.name}_{phase}_epoch{self.current_epoch}_{batch_idx}.png')
 
     def train_dataloader(self):
         return DataLoader(
@@ -157,6 +157,8 @@ class UNetModel(BaseModel):
 
         self.batch_size = 6
 
+        self.name = 'unet'
+
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-4, eps=1e-7, weight_decay=1e-4)
         return optimizer
@@ -170,6 +172,8 @@ class SegformerModel(BaseModel):
         super().__init__(segformer.get_model())
 
         self.batch_size = 4
+
+        self.name = 'segformer'
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-4, eps=1e-7, weight_decay=1e-4)

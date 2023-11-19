@@ -1,6 +1,4 @@
 from pathlib import Path
-import segformer
-import lightning.pytorch as pl
 
 import numpy as np
 import torch
@@ -12,7 +10,6 @@ from fancy_unet import Unet
 import torch.utils.data
 from dataset import ColonDataset
 from path_util import out_dir
-from plot_util import save_next
 
 import torchmetrics
 import lightning.pytorch as pl
@@ -200,7 +197,7 @@ def main(args):
         model = Model()
     trainer = pl.Trainer(
         log_every_n_steps=1,  # optimizer steps!
-        max_epochs=3,
+        max_epochs=10,
         deterministic=False,
         accumulate_grad_batches=16 if args.model == 'unet' else 6,
         reload_dataloaders_every_n_epochs=1,

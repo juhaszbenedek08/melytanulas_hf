@@ -171,7 +171,7 @@ class SegformerModel(BaseModel):
     def __init__(self):
         super().__init__(segformer.get_model())
 
-        self.batch_size = 16
+        self.batch_size = 12
 
         self.name = 'segformer'
 
@@ -202,7 +202,7 @@ def main(args):
         log_every_n_steps=1,  # optimizer steps!
         max_epochs=3,
         deterministic=False,
-        accumulate_grad_batches=16,
+        accumulate_grad_batches=16 if args.model == 'unet' else 6,
         reload_dataloaders_every_n_epochs=1,
         logger=pl.loggers.TensorBoardLogger(out_dir),
     )

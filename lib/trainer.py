@@ -41,12 +41,12 @@ class BaseModel(pl.LightningModule):
         gt = torch.cat((lb_mask, sb_mask, st_mask), 1)
         pred_raw = self(img)
         loss = self.loss_fn(pred_raw, gt.float())
-        self.log(f'train/loss', loss, on_step=True, on_epoch=True)
+        self.log(f'train/loss', loss, on_step=True, on_epoch=True, prog_bar=True)
 
         if batch_idx % self.dice_frequency == 0:
             pred = torch.sigmoid(pred_raw)
             dice_score = self.dice_score_fn(pred, gt)
-            self.log(f'train/dice_score', dice_score, on_step=True, on_epoch=True)
+            self.log(f'train/dice_score', dice_score, on_step=True, on_epoch=True, prog_bar=True)
 
         if batch_idx % (self.dice_frequency * 10) == 0:
             self.show_fig('train', img, lb_mask, sb_mask, st_mask, pred, batch_idx)
@@ -168,7 +168,7 @@ class SegformerModel(BaseModel):
     def __init__(self):
         super().__init__(segformer.get_model())
 
-        self.batch_size = 12
+        self.batch_size = 6
 
         self.name = 'segformer'
 

@@ -155,7 +155,7 @@ class UNetModel(BaseModel):
             class_num=3
         ))
 
-        self.batch_size = 6
+        self.batch_size = 16
 
         self.name = 'unet'
 

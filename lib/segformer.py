@@ -11,7 +11,7 @@ def get_model():
     # label2id = {v: k for k, v in id2label.items()}
 
     model = SegformerForSemanticSegmentation.from_pretrained(
-        "nvidia/segformer-b0-finetuned-ade-512-512",
+        "nvidia/segformer-b2-finetuned-ade-512-512",
         return_dict=False,
         num_labels=3,
         # id2label=id2label,

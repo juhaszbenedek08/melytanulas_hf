@@ -10,4 +10,4 @@ docker run \
   -v "${OUT_DIR}:/out" \
   -v "${CODE_DIR}:/code" \
   melytanulas:latest \
-  /bin/bash startup.sh
+  /bin/bash /code/startup.sh

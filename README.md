@@ -6,6 +6,8 @@
 > - Juhász Benedek László [C8B5CT]
 > - Tumay Ádám [Z7MTDT]
 
+NOTE The project, including the documentation was created with the help of GitHub Copilot.
+
 ## Task Description
 
 Transformer networks revolutionized deep learning,
@@ -160,13 +162,14 @@ Instructions to setup Docker Remote interpreter in PyCharm:
 ### Colab Usage
 
 You can execute the training in colab as well, by making necessary modifications to the main.ipynb file.
+Make sure you download the dataset before running the training, and modify the `/data` and `/mount` positions.
+
+Add option `--gradio` to run the demo. The demo is ONLY available in colab for technical reasons.
+Select a test image from the list, and the corresponding prediction will be displayed, as well as the target image.
 
 ### Interactive UI usage
 
 You can use the interactive UI to make predictions on the test set.
-To do so,
-
-In order to use the UI, make sure the port describe in the build/run.sh is not already in use.
 
 TODO finish this section.
 
@@ -215,7 +218,7 @@ but it seems the convergence was not affected by the interruptions.
 
 | Model                | Epochs | Dice Score | BCELoss | Average Time Saved - Large Bowel | Average Time Saved -  Saved Small Bowel | Average Time Saved - Saved Stomach |
 |----------------------|--------|------------|---------|----------------------------------|-----------------------------------------|------------------------------------| 
-| Segformer            |        | 0.67       | 0.039   | 1.19                             | -0.22                                   | -0.33                              |
+| Segformer            | 14     | 0.67       | 0.039   | 1.19                             | -0.22                                   | -0.33                              |
 | FancyUnet (baseline) |        | 0.67       | 0.019   | 1.85                             | -0.38                                   | -0.35                              |
 
 Our 'complex' evaluation metric approximates the time saved by the radiologist using our network.
@@ -223,6 +226,28 @@ If the dice score of a picture is above a certain threshold (see lib/trainer.py)
 then we assume that the radiologist would not have to check the segmentation of that picture,
 however if the dice score is below the threshold,
 then the radiologist would have to spend extra time on checking that picture.
+
+## Training logs
+
+Note that both experiments have been restarted multiple times,
+and where the plot line ends for one run, the next starts on the same epoch.
+Note batches are not comparable.
+
+### For SegFormer
+
+<table>
+   <tr>
+      <td><img src="assets/readme/segformer_logs.png" width=800 ></td>
+   </tr>
+</table>
+
+### For FancyUnet
+
+<table>
+   <tr>
+      <td><img src="assets/readme/fancyunet_logs.png" width=800 ></td>
+    </tr>
+ </table>
 
 # Conclusion
 
@@ -284,13 +309,7 @@ Prediction - Ground truth
 
 <table>
     <tr>
-        <td><img src="assets/readme/fancyunet1.gif" width=800 ></td>
-    </tr>
-    <tr>
-        <td><img src="assets/readme/fancyunet2.gif" width=800 ></td>
-    </tr>
-    <tr>
-        <td><img src="assets/readme/fancyunet3.gif" width=800 ></td>
+        <td><img src="assets/readme/fancyunet.gif" width=800 ></td>
     </tr>
  </table>
 
@@ -298,16 +317,9 @@ Prediction - Ground truth
 
 <table>
     <tr>
-        <td><img src="assets/readme/segformer1.gif" width=800 ></td>
-    </tr>
-    <tr>
-        <td><img src="assets/readme/segformer2.gif" width=800 ></td>
-    </tr>
-    <tr>
-        <td><img src="assets/readme/segformer3.gif" width=800 ></td>
+        <td><img src="assets/readme/segformer.gif" width=800 ></td>
     </tr>
  </table>
-
 
 ## UI Demo
 

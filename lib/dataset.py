@@ -117,9 +117,10 @@ class ColonDataModule(pl.LightningDataModule):
 
         return f"{day_dir.name}_slice_{slice_num}"
 
-    def __init__(self, batch_size):
+    def __init__(self, batch_size, num_workers):
         super().__init__()
         self.batch_size = batch_size
+        self.num_workers = num_workers
         self.annots = pd.read_csv(
             csv_path,
             dtype={'id': str, 'class': str, 'segmentation': str},
@@ -170,27 +171,27 @@ class ColonDataModule(pl.LightningDataModule):
             self.train_data,
             batch_size=self.batch_size,
             shuffle=True,
-            num_workers=3,
+            num_workers=self.num_workers,
         )
 
     def val_dataloader(self):
         return DataLoader(
             self.val_data,
             batch_size=self.batch_size,
-            num_workers=3,
+            num_workers=self.num_workers,
         )
 
     def test_dataloader(self):
         return DataLoader(
             self.test_data,
             batch_size=1,
-            num_workers=3,
+            num_workers=self.num_workers,
         )
 
 
 def main():
     """ Test the dataset"""
-    dm = ColonDataModule(1)
+    dm = ColonDataModule(1, 1)
     dm.setup('fit')
 
     print('Dataset length:', len(dm))

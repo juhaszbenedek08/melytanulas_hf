@@ -10,5 +10,3 @@ RUN pip install -U pip
 RUN pip install -r requirements.txt
 
 RUN pip freeze # for freezing requirements.txt
-
-COPY build/startup.sh startup.sh

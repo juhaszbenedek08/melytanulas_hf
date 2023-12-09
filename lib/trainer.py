@@ -247,6 +247,7 @@ def main(args):
     dm = ColonDataModule(model.batch_size, 3 if args.colab else 1)
 
     trainer = pl.Trainer(
+        accelerator='cpu' if args.gradio else 'auto',
         log_every_n_steps=1,  # optimizer steps!
         max_epochs=10,
         deterministic=False,

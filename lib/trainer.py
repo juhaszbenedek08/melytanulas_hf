@@ -195,10 +195,10 @@ class GradioDemo:
 
     def test_step(self, batch):
         img, lb_mask, sb_mask, st_mask = batch
-        img = img[None, ...]
-        lb_mask = lb_mask[None, ...]
-        sb_mask = sb_mask[None, ...]
-        st_mask = st_mask[None, ...]
+        img = img[None, ...].cuda()
+        lb_mask = lb_mask[None, ...].cuda()
+        sb_mask = sb_mask[None, ...].cuda()
+        st_mask = st_mask[None, ...].cuda()
         gt = torch.cat((lb_mask, sb_mask, st_mask), 1)
         pred_raw = self.model(img)
         loss = self.model.loss_fn(pred_raw, gt.float())
@@ -247,7 +247,6 @@ def main(args):
     dm = ColonDataModule(model.batch_size, 3 if args.colab else 1)
 
     trainer = pl.Trainer(
-        accelerator='cpu' if args.gradio else 'auto',
         log_every_n_steps=1,  # optimizer steps!
         max_epochs=10,
         deterministic=False,

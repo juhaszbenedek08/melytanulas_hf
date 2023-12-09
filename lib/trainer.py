@@ -3,12 +3,11 @@ from pathlib import Path
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
-from torch.utils.data import DataLoader, random_split
 
 import segformer
-from fancy_unet import Unet
+from dataset import ColonDataModule
 import torch.utils.data
-from dataset import ColonDataset
+from fancy_unet import Unet as FancyUnet
 from path_util import out_dir
 
 import torchmetrics
@@ -25,13 +24,6 @@ class BaseModel(pl.LightningModule):
         self.dice_score_fn = torchmetrics.Dice(zero_division=1)
 
         self.dice_frequency = 32  # MUST be min accumulate_grad_batches and SHOULD be equal
-
-        self.dataset = ColonDataset()
-        self.train_data, self.val_data, self.test_data = random_split(
-            self.dataset,
-            [0.8, 0.1, 0.1],
-            generator=torch.Generator().manual_seed(42)
-        )
 
     def forward(self, x):
         return self.internal(x)
@@ -105,28 +97,6 @@ class BaseModel(pl.LightningModule):
         ax2.imshow(img2)
         fig.savefig(Path(self.logger.log_dir) / f'{self.name}_{phase}_epoch{self.current_epoch}_{batch_idx}.png')
 
-    def train_dataloader(self):
-        return DataLoader(
-            self.train_data,
-            batch_size=self.batch_size,
-            shuffle=True,
-            num_workers=3,
-        )
-
-    def val_dataloader(self):
-        return DataLoader(
-            self.val_data,
-            batch_size=self.batch_size,
-            num_workers=3,
-        )
-
-    def test_dataloader(self):
-        return DataLoader(
-            self.test_data,
-            batch_size=1,
-            num_workers=3,
-        )
-
     def optimizer_zero_grad(self, epoch, batch_idx, optimizer):
         optimizer.zero_grad(set_to_none=True)
 
@@ -141,9 +111,9 @@ class BaseModel(pl.LightningModule):
         ]
 
 
-class UNetModel(BaseModel):
+class FancyUNetModel(BaseModel):
     def __init__(self):
-        super().__init__(Unet(
+        super().__init__(FancyUnet(
             in_channels=1,
             inter_channels=48,
             height=5,
@@ -183,8 +153,8 @@ class SegformerModel(BaseModel):
 
 
 def main(args):
-    if args.model == 'unet':
-        Model = UNetModel
+    if args.model == 'fancy_unet':
+        Model = FancyUNetModel
     elif args.model == 'segformer':
         Model = SegformerModel
     else:
@@ -194,6 +164,9 @@ def main(args):
         model = Model.load_from_checkpoint(args.checkpoint)
     else:
         model = Model()
+
+    dm = ColonDataModule(model.batch_size)
+
     trainer = pl.Trainer(
         log_every_n_steps=1,  # optimizer steps!
         max_epochs=10,
@@ -203,5 +176,5 @@ def main(args):
         logger=pl.loggers.TensorBoardLogger(out_dir),
     )
     if not args.only_test:
-        trainer.fit(model)
-    trainer.test(model)
+        trainer.fit(model, dm)
+    trainer.test(model, dm)

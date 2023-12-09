@@ -1,37 +1,18 @@
+import shutil
 import subprocess
 
 import gdown
 import numpy as np
 import torchvision
 from matplotlib import pyplot as plt
-from torch.utils.data import Dataset, random_split, DataLoader
+from torch.utils.data import Dataset, DataLoader
 import torch
 import pandas as pd
 from PIL import Image
 
 from path_util import data_dir, raw_dir, csv_path
 from plot_util import save_next
-
-
-def rl_decode(shape, sequence):
-    """
-    Run-length decoding of an array (starting with zeros).
-    """
-    arr = np.zeros(shape, dtype=int).reshape(-1)
-    starts = sequence[0::2]
-    lengths = sequence[1::2]
-    for start, length in zip(starts, lengths):
-        arr[start: start + length] = 1
-    arr = arr.reshape(shape)
-    return arr
-
-
-def get_mask(shape, segmentation_str):
-    if segmentation_str == '':
-        return np.zeros(shape, dtype=int)
-    else:
-        lengths = [int(length) for length in segmentation_str.split(' ')]
-        return rl_decode(shape, lengths)
+import lightning.pytorch as pl
 
 
 def removeprefix(text, prefix):
@@ -41,9 +22,9 @@ def removeprefix(text, prefix):
 
 
 def download():
-    if not data_dir.exists():
-        data_dir.mkdir()
+    assert data_dir.exists()
     if len(list(data_dir.iterdir())) > 0:
+        print('Data already downloaded')
         return
     url = "https://drive.google.com/uc?id=1nq7DCNJsm27z8nKdvFRxphUnokU41ZY6"
     zip_path = data_dir / 'raw.zip'
@@ -54,37 +35,8 @@ def download():
 
 class ColonDataset(Dataset):
 
-    @staticmethod
-    def get_case_id(day_dir, scan_path):
-        slice_num = str(scan_path.name.split('_')[1])
-
-        return f"{day_dir.name}_slice_{slice_num}"
-
-    def __init__(self):
-
-        self.annots = pd.read_csv(
-            csv_path,
-            dtype={'id': str, 'class': str, 'segmentation': str},
-        ).fillna('').pivot(
-            index='id',
-            columns='class',
-            values='segmentation'
-        ).reset_index()
-        self.annots = self.annots[
-            (self.annots['large_bowel'] != '')
-            | (self.annots['small_bowel'] != '')
-            | (self.annots['stomach'] != '')
-            ]
-
-        all_scans = {
-            self.get_case_id(day_dir, scan_path): str(scan_path)
-            for case_dir in raw_dir.iterdir()
-            for day_dir in case_dir.iterdir()
-            for scan_path in (day_dir / 'scans').iterdir()
-        }
-        self.annots['path'] = self.annots['id'].map(all_scans)
-
-        print(self.annots)
+    def __init__(self, annots):
+        self.annots = annots
 
         self.size = (384, 384)
         self.img_resizer = torchvision.transforms.Resize(size=self.size)
@@ -93,7 +45,41 @@ class ColonDataset(Dataset):
             interpolation=torchvision.transforms.InterpolationMode.NEAREST
         )
 
-    def normalize(self, img):
+    def __len__(self):
+        return len(self.annots)
+
+    @staticmethod
+    def rl_decode(shape, sequence):
+        """
+        Run-length decoding of an array (starting with zeros).
+        """
+        arr = np.zeros(shape, dtype=int).reshape(-1)
+        starts = sequence[0::2]
+        lengths = sequence[1::2]
+        for start, length in zip(starts, lengths):
+            arr[start: start + length] = 1
+        arr = arr.reshape(shape)
+        return arr
+
+    def get_mask(self, shape, segmentation_str):
+        if segmentation_str == '':
+            return np.zeros(shape, dtype=int)
+        else:
+            lengths = [int(length) for length in segmentation_str.split(' ')]
+            return self.rl_decode(shape, lengths)
+
+    def mask_from(self, img, row, column):
+        return self.mask_resizer(
+            torch.tensor(
+                self.get_mask(
+                    img.shape,
+                    row[column]
+                ),
+                dtype=torch.int)[None]
+        )
+
+    @staticmethod
+    def normalize(img):
         intensities = torch.flatten(img)
         intensities = torch.sort(intensities).values
         idx = int(intensities.size(0) / 30)
@@ -103,19 +89,6 @@ class ColonDataset(Dataset):
         img[img < 0] = 0
         img[img > 1] = 1
         return img
-
-    def __len__(self):
-        return len(self.annots)
-
-    def mask_from(self, img, row, column):
-        return self.mask_resizer(
-            torch.tensor(
-                get_mask(
-                    img.shape,
-                    row[column]
-                ),
-                dtype=torch.int)[None]
-        )
 
     def __getitem__(self, item):
         row = self.annots.iloc[item, :]
@@ -129,21 +102,93 @@ class ColonDataset(Dataset):
         return img, lb_mask, sb_mask, st_mask
 
 
+class ColonDataModule(pl.LightningDataModule):
+    @staticmethod
+    def get_case_id(day_dir, scan_path):
+        slice_num = str(scan_path.name.split('_')[1])
+
+        return f"{day_dir.name}_slice_{slice_num}"
+
+    def __init__(self, batch_size):
+        super().__init__()
+        self.batch_size = batch_size
+        self.annots = pd.read_csv(
+            csv_path,
+            dtype={'id': str, 'class': str, 'segmentation': str},
+        ).fillna('').pivot(
+            index='id',
+            columns='class',
+            values='segmentation'
+        ).reset_index()
+        self.annots['case'] = self.annots['id'].apply(lambda x: removeprefix(x.split('_')[0], 'case'))
+        self.annots['day'] = self.annots['id'].apply(lambda x: removeprefix(x.split('_')[1], 'day'))
+
+        self.annots = self.annots[
+            (self.annots['large_bowel'] != '')
+            | (self.annots['small_bowel'] != '')
+            | (self.annots['stomach'] != '')
+            ]
+
+        all_scans = {
+            self.get_case_id(day_dir, scan_path): str(scan_path)
+            for case_dir in raw_dir.iterdir()
+            for day_dir in case_dir.iterdir()
+            for scan_path in (day_dir / 'scans').iterdir()
+        }
+        self.annots['path'] = self.annots['id'].map(all_scans)
+        print(self.annots)
+
+    def __len__(self):
+        return len(self.annots)
+
+    def setup(self, stage: str) -> None:
+        if stage == 'fit':
+            cases = self.annots['case'].unique()
+            np.random.seed(42)
+            np.random.shuffle(cases)
+            index_1 = int(len(cases) * 0.8)
+            index_2 = int(len(cases) * 0.9)
+            train_cases = cases[:index_1]
+            val_cases = cases[index_1:index_2]
+            test_cases = cases[index_2:]
+
+            self.train_data = ColonDataset(self.annots[self.annots['case'].isin(train_cases)])
+            self.val_data = ColonDataset(self.annots[self.annots['case'].isin(val_cases)])
+            self.test_data = ColonDataset(self.annots[self.annots['case'].isin(test_cases)])
+            print('Train length:', len(self.train_data))
+            print('Val length:', len(self.val_data))
+            print('Test length:', len(self.test_data))
+
+    def train_dataloader(self):
+        return DataLoader(
+            self.train_data,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=3,
+        )
+
+    def val_dataloader(self):
+        return DataLoader(
+            self.val_data,
+            batch_size=self.batch_size,
+            num_workers=3,
+        )
+
+    def test_dataloader(self):
+        return DataLoader(
+            self.test_data,
+            batch_size=1,
+            num_workers=3,
+        )
+
+
 def main():
-    ds = ColonDataset()
+    dm = ColonDataModule(1)
+    dm.setup('fit')
 
-    print('Dataset length:', len(ds))
+    print('Dataset length:', len(dm))
 
-    train_data, val_data, test_data = random_split(
-        ds,
-        [0.8, 0.1, 0.1],
-        generator=torch.Generator().manual_seed(42)
-    )
-    train_loader = DataLoader(train_data, batch_size=64, shuffle=True)
-    val_loader = DataLoader(val_data, batch_size=64, shuffle=True)
-    test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
-
-    for img, lb_mask, sb_mask, st_mask in test_loader:
+    for img, lb_mask, sb_mask, st_mask in dm.test_dataloader():
         if lb_mask.sum() > 0 and sb_mask.sum() > 0 and st_mask.sum() > 0:
             fig, ax = plt.subplots()  # type: plt.Figure, plt.Axes
             img = torch.stack([img[0, 0]] * 3, dim=-1)

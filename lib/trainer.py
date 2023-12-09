@@ -191,7 +191,7 @@ class GradioDemo:
         return self.test_step(batch)
 
     def run(self):
-        self.iface.launch(inline=True)
+        self.iface.launch(share=True)
 
     def test_step(self, batch):
         img, lb_mask, sb_mask, st_mask = batch

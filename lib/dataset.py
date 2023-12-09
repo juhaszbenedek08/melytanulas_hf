@@ -1,4 +1,3 @@
-import shutil
 import subprocess
 
 import gdown
@@ -16,12 +15,14 @@ import lightning.pytorch as pl
 
 
 def removeprefix(text, prefix):
+    """Removes prefix from text"""
     if text.startswith(prefix):
         return text[len(prefix):]
     return text  # or whatever
 
 
 def download():
+    """ Download the dataset from Google Drive """
     assert data_dir.exists()
     if len(list(data_dir.iterdir())) > 0:
         print('Data already downloaded')
@@ -34,6 +35,7 @@ def download():
 
 
 class ColonDataset(Dataset):
+    """ Segmentation dataset """
 
     def __init__(self, annots):
         self.annots = annots
@@ -62,6 +64,7 @@ class ColonDataset(Dataset):
         return arr
 
     def get_mask(self, shape, segmentation_str):
+        """ Convert segmentation string to mask """
         if segmentation_str == '':
             return np.zeros(shape, dtype=int)
         else:
@@ -69,6 +72,7 @@ class ColonDataset(Dataset):
             return self.rl_decode(shape, lengths)
 
     def mask_from(self, img, row, column):
+        """ Get specific mask from row """
         return self.mask_resizer(
             torch.tensor(
                 self.get_mask(
@@ -80,6 +84,9 @@ class ColonDataset(Dataset):
 
     @staticmethod
     def normalize(img):
+        """ Normalize image.
+        This includes removing the top and bottom 3% of intensities for burn-in and burn-out correction.
+        """
         intensities = torch.flatten(img)
         intensities = torch.sort(intensities).values
         idx = int(intensities.size(0) / 30)
@@ -105,6 +112,7 @@ class ColonDataset(Dataset):
 class ColonDataModule(pl.LightningDataModule):
     @staticmethod
     def get_case_id(day_dir, scan_path):
+        """ Get full case id from path (to match with annotations)"""
         slice_num = str(scan_path.name.split('_')[1])
 
         return f"{day_dir.name}_slice_{slice_num}"
@@ -138,26 +146,24 @@ class ColonDataModule(pl.LightningDataModule):
         self.annots['path'] = self.annots['id'].map(all_scans)
         print(self.annots)
 
+        cases = self.annots['case'].unique()
+        np.random.seed(42)
+        np.random.shuffle(cases)
+        index_1 = int(len(cases) * 0.8)
+        index_2 = int(len(cases) * 0.9)
+        train_cases = cases[:index_1]
+        val_cases = cases[index_1:index_2]
+        test_cases = cases[index_2:]
+
+        self.train_data = ColonDataset(self.annots[self.annots['case'].isin(train_cases)])
+        self.val_data = ColonDataset(self.annots[self.annots['case'].isin(val_cases)])
+        self.test_data = ColonDataset(self.annots[self.annots['case'].isin(test_cases)])
+        print('Train length:', len(self.train_data))
+        print('Val length:', len(self.val_data))
+        print('Test length:', len(self.test_data))
+
     def __len__(self):
         return len(self.annots)
-
-    def setup(self, stage: str) -> None:
-        if stage == 'fit':
-            cases = self.annots['case'].unique()
-            np.random.seed(42)
-            np.random.shuffle(cases)
-            index_1 = int(len(cases) * 0.8)
-            index_2 = int(len(cases) * 0.9)
-            train_cases = cases[:index_1]
-            val_cases = cases[index_1:index_2]
-            test_cases = cases[index_2:]
-
-            self.train_data = ColonDataset(self.annots[self.annots['case'].isin(train_cases)])
-            self.val_data = ColonDataset(self.annots[self.annots['case'].isin(val_cases)])
-            self.test_data = ColonDataset(self.annots[self.annots['case'].isin(test_cases)])
-            print('Train length:', len(self.train_data))
-            print('Val length:', len(self.val_data))
-            print('Test length:', len(self.test_data))
 
     def train_dataloader(self):
         return DataLoader(
@@ -183,6 +189,7 @@ class ColonDataModule(pl.LightningDataModule):
 
 
 def main():
+    """ Test the dataset"""
     dm = ColonDataModule(1)
     dm.setup('fit')
 

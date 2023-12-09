@@ -15,6 +15,8 @@ import lightning.pytorch as pl
 
 
 class BaseModel(pl.LightningModule):
+    """ Common settings for the two models """
+
     def __init__(self, internal):
         super().__init__()
 
@@ -29,6 +31,7 @@ class BaseModel(pl.LightningModule):
         return self.internal(x)
 
     def training_step(self, batch, batch_idx):
+        """ Train, occasionally calculate metrics, occasionally show figures"""
         img, lb_mask, sb_mask, st_mask = batch
         gt = torch.cat((lb_mask, sb_mask, st_mask), 1)
         pred_raw = self(img)
@@ -46,6 +49,7 @@ class BaseModel(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
+        """ Calculate metrics, show figures for 10 fixed images"""
         img, lb_mask, sb_mask, st_mask = batch
         gt = torch.cat((lb_mask, sb_mask, st_mask), 1)
         pred_raw = self(img)
@@ -60,6 +64,7 @@ class BaseModel(pl.LightningModule):
             self.show_fig('val', img, lb_mask, sb_mask, st_mask, pred, batch_idx)
 
     def test_step(self, batch, batch_idx):
+        """ Calculate metrics including custom metric, show figures for 10 fixed images"""
         img, lb_mask, sb_mask, st_mask = batch
         gt = torch.cat((lb_mask, sb_mask, st_mask), 1)
         pred_raw = self(img)
@@ -83,6 +88,7 @@ class BaseModel(pl.LightningModule):
         return loss
 
     def show_fig(self, phase, img, lb_mask, sb_mask, st_mask, pred, batch_idx):
+        """ Create and save figure with 2 images: original and prediction """
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
         img1 = np.stack([img.detach().cpu().numpy()[0, 0]] * 3, axis=-1)
         pred = pred.detach().cpu().numpy()
@@ -112,6 +118,8 @@ class BaseModel(pl.LightningModule):
 
 
 class FancyUNetModel(BaseModel):
+    """ Model and parameters for using fancy_unet as backbone """
+
     def __init__(self):
         super().__init__(FancyUnet(
             in_channels=1,
@@ -123,7 +131,7 @@ class FancyUNetModel(BaseModel):
 
         self.batch_size = 6
 
-        self.name = 'unet'
+        self.name = 'fancy_unet'
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-4, eps=1e-7, weight_decay=1e-4)
@@ -134,6 +142,8 @@ class FancyUNetModel(BaseModel):
 
 
 class SegformerModel(BaseModel):
+    """ Model and parameters for using segformer as backbone """
+
     def __init__(self):
         super().__init__(segformer.get_model())
 
@@ -153,6 +163,7 @@ class SegformerModel(BaseModel):
 
 
 def main(args):
+    """ Create or load model, create data module and trainer, run training and testing """
     if args.model == 'fancy_unet':
         Model = FancyUNetModel
     elif args.model == 'segformer':

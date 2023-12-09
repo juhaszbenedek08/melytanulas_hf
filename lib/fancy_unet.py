@@ -41,6 +41,9 @@ class HeadBlock(torch.nn.Module):
 
 
 class Unet(torch.nn.Module):
+    """ Custom UNet implementation, with DenseBlocks to increase connectivity
+    Similar idea to https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-ipr.2019.1527
+    """
 
     def __init__(self, in_channels=1, inter_channels=32, height=4, width=2, class_num=3):
         super().__init__()
@@ -64,9 +67,9 @@ class Unet(torch.nn.Module):
         skip_channels = skip_channels[::-1]
         up_channels = inter_channels * width
         for i in range(height):
-            skip_num = skip_channels[i+1]
+            skip_num = skip_channels[i + 1]
             for j in range(width):
-                self.dec_blocks.append(DenseBlock(skip_num + up_channels + j*inter_channels, inter_channels))
+                self.dec_blocks.append(DenseBlock(skip_num + up_channels + j * inter_channels, inter_channels))
             up_channels += width * inter_channels
 
         head_channels = up_channels + skip_num
@@ -81,18 +84,17 @@ class Unet(torch.nn.Module):
         skips = []
         for i in range(self.height + 1):
             for j in range(self.width):
-                x = torch.cat((x, self.enc_blocks[i*self.width + j](x)), 1)
+                x = torch.cat((x, self.enc_blocks[i * self.width + j](x)), 1)
             skips.append(x)
             if i != self.height:
                 x = self.pool(x)
 
-
         skips = skips[::-1]
         for i in range(self.height):
-            x = x[:, -self.inter_channels * self.width * (i+1):, :, :]
+            x = x[:, -self.inter_channels * self.width * (i + 1):, :, :]
             x = torch.cat((self.upsample(x), skips[i + 1]), 1)
             for j in range(self.width):
-                x = torch.cat((x, self.dec_blocks[i*self.width + j](x)),1)
+                x = torch.cat((x, self.dec_blocks[i * self.width + j](x)), 1)
 
         return self.trans_u(self.head(x))
         # return self.head(x)

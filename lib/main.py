@@ -6,6 +6,12 @@ import argparse
 
 
 def main():
+    """ Entry point for the program.
+    Parses command line arguments and runs the appropriate function(s), including:
+    - Downloading the dataset
+    - Training the model
+    - Testing the model
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument('--download', action='store_true', default=False)
     ap.add_argument('--checkpoint', type=str, default=None)

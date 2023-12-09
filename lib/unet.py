@@ -58,6 +58,9 @@ class Decoder(torch.nn.Module):
 
 
 class Unet(torch.nn.Module):
+    """ Classical Unet implementation.
+    See https://arxiv.org/abs/1505.04597 for reference.
+    """
 
     def __init__(self, encChannels = (1, 16, 32, 64, 128, 256), decChannels = (256, 128, 64, 32, 16), nbClasses = 2, outSize = (512, 512)):
         super().__init__()

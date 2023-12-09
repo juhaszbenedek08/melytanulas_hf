@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import numpy as np
+from lib.gradio import GradioDemo
 import torch
 from matplotlib import pyplot as plt
 
@@ -186,6 +187,10 @@ def main(args):
         reload_dataloaders_every_n_epochs=1,
         logger=pl.loggers.TensorBoardLogger(out_dir),
     )
-    if not args.only_test:
-        trainer.fit(model, dm)
-    trainer.test(model, dm)
+
+    if not args.interactive:
+        if not args.only_test:
+            trainer.fit(model, dm)
+        trainer.test(model, dm)
+    else:
+        GradioDemo(model, dm).run()

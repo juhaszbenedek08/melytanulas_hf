@@ -17,6 +17,7 @@ def main():
     ap.add_argument('--checkpoint', type=str, default=None)
     ap.add_argument('--model', type=str, default='fancy_unet')
     ap.add_argument('--only_test', action='store_true', default=False)
+    ap.add_argument('--interactive', action='store_true', default=False)
     args = ap.parse_args()
 
     if torch.cuda.is_available():

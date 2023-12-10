@@ -60,7 +60,7 @@ and facilitate feature reuse,
 while skip connections help the model to learn on different scales of the input data.
 
 <table>
-   <tr><td><img src="assets/readme/denseunet.png" width=800 ></td></tr>
+   <tr><td><img src="assets/readme/denseunet.png" width=400 ></td></tr>
    <tr><td>DenseUnet architecture</td></tr>
    
  </table>
@@ -83,7 +83,7 @@ though this makes the comparison with the scratch trained convolutional architec
 The model is available from (HuggingFace)[https://huggingface.co/nvidia/segformer-b2-finetuned-ade-512-512].
 
 <table>
-   <tr><td><img src="assets/readme/segformer.png" width=800 ></td></tr>
+   <tr><td><img src="assets/readme/segformer.png" width=400 ></td></tr>
    <tr><td>SegFormer architecture</td> </tr>
  </table>
 
@@ -232,7 +232,7 @@ Note batches are not comparable.
 
 <table>
    <tr>
-      <td><img src="assets/readme/segformer_logs.png" width=800 ></td>
+      <td><img src="assets/readme/segformer_logs.png" width=400 ></td>
    </tr>
 </table>
 
@@ -240,7 +240,7 @@ Note batches are not comparable.
 
 <table>
    <tr>
-      <td><img src="assets/readme/fancyunet_logs.png" width=800 ></td>
+      <td><img src="assets/readme/fancyunet_logs.png" width=400 ></td>
     </tr>
  </table>
 
@@ -296,13 +296,13 @@ Prediction - Ground truth
 
 <table>
    <tr>
-      <td><img src="assets/readme/fancyunet1.png" width=800 ></td>
+      <td><img src="assets/readme/fancyunet1.png" width=400 ></td>
    </tr>
    <tr>
-      <td><img src="assets/readme/fancyunet2.png" width=800 ></td>
+      <td><img src="assets/readme/fancyunet2.png" width=400 ></td>
     </tr>
     <tr>
-      <td><img src="assets/readme/fancyunet3.png" width=800 ></td>
+      <td><img src="assets/readme/fancyunet3.png" width=400 ></td>
     </tr>
  </table>
 
@@ -310,13 +310,13 @@ Prediction - Ground truth
 
 <table>
    <tr>
-      <td><img src="assets/readme/segformer1.png" width=800 ></td>
+      <td><img src="assets/readme/segformer1.png" width=400 ></td>
    </tr>
    <tr>
-      <td><img src="assets/readme/segformer2.png" width=800 ></td>
+      <td><img src="assets/readme/segformer2.png" width=400 ></td>
     </tr>
     <tr>
-      <td><img src="assets/readme/segformer3.png" width=800 ></td>
+      <td><img src="assets/readme/segformer3.png" width=400 ></td>
     </tr>
  </table>
 
@@ -326,7 +326,7 @@ Prediction - Ground truth
 
 <table>
     <tr>
-        <td><img src="assets/readme/fancyunet.gif" width=800 ></td>
+        <td><img src="assets/readme/fancyunet.gif" width=400 ></td>
     </tr>
  </table>
 
@@ -334,7 +334,7 @@ Prediction - Ground truth
 
 <table>
     <tr>
-        <td><img src="assets/readme/segformer.gif" width=800 ></td>
+        <td><img src="assets/readme/segformer.gif" width=400 ></td>
     </tr>
  </table>
 
@@ -342,6 +342,6 @@ Prediction - Ground truth
 
 <table>
     <tr>
-        <td><img src="assets/readme/ui.png" width=800 ></td>
+        <td><img src="assets/readme/ui.png" width=400 ></td>
     </tr>
  </table>

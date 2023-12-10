@@ -216,16 +216,26 @@ but it seems the convergence was not affected by the interruptions.
 
 # Results
 
+## Metrics on test set
+
 | Model                | Epochs | Dice Score | BCELoss | Average Time Saved - Large Bowel | Average Time Saved -  Saved Small Bowel | Average Time Saved - Saved Stomach |
 |----------------------|--------|------------|---------|----------------------------------|-----------------------------------------|------------------------------------| 
-| Segformer            | 14     | 0.67       | 0.039   | 1.19                             | -0.22                                   | -0.33                              |
-| FancyUnet (baseline) |        | 0.67       | 0.019   | 1.85                             | -0.38                                   | -0.35                              |
+| Segformer            | 14     | 0.729      | 0.020   | 2.29                             | 0.45                                    | 0.05                               |
+| FancyUnet (baseline) | 6      | 0.681      | 0.025   | 1.35                             | 0.22                                    | -0.62                              |
 
 Our 'complex' evaluation metric approximates the time saved by the radiologist using our network.
 If the dice score of a picture is above a certain threshold (see lib/trainer.py),
 then we assume that the radiologist would not have to check the segmentation of that picture,
 however if the dice score is below the threshold,
 then the radiologist would have to spend extra time on checking that picture.
+
+## Analysis of results
+
+The SegFormer model improved on validation until early stopping occurred, and reached a dice score of 0.78 on the
+validation set.
+However on the test set it performed significantly worse, with a dice score of 0.729.
+As we did not hyper-parameter optimizer, this suggests that the inhomogeneity between the validation and test set is
+significant.
 
 ## Training logs
 
@@ -321,6 +331,10 @@ Prediction - Ground truth
     </tr>
  </table>
 
-## UI Demo
+## Demo
 
-TODO
+<table>
+    <tr>
+        <td><img src="assets/readme/ui.png" width=800 ></td>
+    </tr>
+ </table>

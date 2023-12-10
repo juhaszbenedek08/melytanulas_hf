@@ -117,7 +117,7 @@ Note that the raw data contains the CT scans as png images, and the segmentation
 - **lib/segformer.py** : Contains the acquisition of the (pretrained) Segformer architecture, that is the main obejct of
   these experiments.
 - **lib/trainer.py** : Contains the Pytorch Lightning trainer logic, that is responsible for the training and validation
-  of the models.
+  of the models. Also contains the gradio demo.
 - **lib/unet.py** : Contains a U-Net implementation, that was used for sanity checks.
 
 ## Usage
@@ -166,12 +166,6 @@ Make sure you download the dataset before running the training, and modify the `
 
 Add option `--gradio` to run the demo. The demo is ONLY available in colab for technical reasons.
 Select a test image from the list, and the corresponding prediction will be displayed, as well as the target image.
-
-### Interactive UI usage
-
-You can use the interactive UI to make predictions on the test set.
-
-TODO finish this section.
 
 # Methods of training
 
@@ -229,14 +223,6 @@ then we assume that the radiologist would not have to check the segmentation of 
 however if the dice score is below the threshold,
 then the radiologist would have to spend extra time on checking that picture.
 
-## Analysis of results
-
-The SegFormer model improved on validation until early stopping occurred, and reached a dice score of 0.78 on the
-validation set.
-However on the test set it performed significantly worse, with a dice score of 0.729.
-As we did not hyper-parameter optimizer, this suggests that the inhomogeneity between the validation and test set is
-significant.
-
 ## Training logs
 
 Note that both experiments have been restarted multiple times,
@@ -260,6 +246,26 @@ Note batches are not comparable.
  </table>
 
 # Conclusion
+
+The SegFormer model improved on validation until early stopping occurred, and reached a dice score of 0.78 on the
+validation set.
+However on the test set it performed significantly worse, with a dice score of 0.729.
+As we did not hyper-parameter optimizer, this suggests that the inhomogeneity between the validation and test set is
+significant.
+
+The FancyUnet model reached a dice score of 0.681 on the test set. Compared to the SegFormer model, it performed worse
+in every metric, however it was trained for less epochs (it overfit earlier), and it was trained from scratch.
+Bearing that in mind, the difference between the two models is surprisingly small.
+Using this model is not recommended though, as it is not as good as the SegFormer model, and our custom metric suggests that
+in the stomach cases it would not save time for the radiologist.
+
+The better model is the SegFormer model, however it is not perfect.
+Some ideas to improve the results:
+- use a larger dataset
+- use a hyper-parameter optimizer
+- use a larger model
+- use a model with similar resolution
+- use a native black-and-white model
 
 # Example Gallery
 

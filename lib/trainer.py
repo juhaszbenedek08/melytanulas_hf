@@ -165,6 +165,8 @@ class SegformerModel(BaseModel):
 
 
 class GradioDemo:
+    """ Gradio demo for testing the model """
+
     def __init__(self, model: BaseModel, dm: ColonDataModule):
         self.model = model
         self.dm = dm
@@ -186,14 +188,17 @@ class GradioDemo:
         self.model.eval()
 
     def get_test_image(self, id_):
+        """ Get test image and run test_step """
         index = self.dm.test_data.annots.index[self.dm.test_data.annots['id'] == id_].to_list()[0]
         batch = self.dm.test_data[index]
         return self.test_step(batch)
 
     def run(self):
+        """ Run the demo """
         self.iface.launch(share=True)
 
     def test_step(self, batch):
+        """ Calculate metrics including custom metric, show figures for 10 fixed images"""
         img, lb_mask, sb_mask, st_mask = batch
         img = img[None, ...].cuda()
         lb_mask = lb_mask[None, ...].cuda()

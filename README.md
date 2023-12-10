@@ -60,9 +60,9 @@ and facilitate feature reuse,
 while skip connections help the model to learn on different scales of the input data.
 
 <table>
-   <tr>
-      <td><img src="assets/readme/denseunet.png" width=800 ></td>
-   </tr>
+   <tr><td><img src="assets/readme/denseunet.png" width=800 ></td></tr>
+   <tr><td>DenseUnet architecture</td></tr>
+   
  </table>
 
 The transformer architectures rely on use feature pyramids, skip connections, attention mechanisms and fully convoluted
@@ -83,9 +83,8 @@ though this makes the comparison with the scratch trained convolutional architec
 The model is available from (HuggingFace)[https://huggingface.co/nvidia/segformer-b2-finetuned-ade-512-512].
 
 <table>
-   <tr>
-      <td><img src="assets/readme/segformer.png" width=800 ></td>
-   </tr>
+   <tr><td><img src="assets/readme/segformer.png" width=800 ></td></tr>
+   <tr><td>SegFormer architecture</td> </tr>
  </table>
 
 ## Dataset
@@ -256,11 +255,13 @@ significant.
 The FancyUnet model reached a dice score of 0.681 on the test set. Compared to the SegFormer model, it performed worse
 in every metric, however it was trained for less epochs (it overfit earlier), and it was trained from scratch.
 Bearing that in mind, the difference between the two models is surprisingly small.
-Using this model is not recommended though, as it is not as good as the SegFormer model, and our custom metric suggests that
+Using this model is not recommended though, as it is not as good as the SegFormer model, and our custom metric suggests
+that
 in the stomach cases it would not save time for the radiologist.
 
 The better model is the SegFormer model, however it is not perfect.
 Some ideas to improve the results:
+
 - use a larger dataset
 - use a hyper-parameter optimizer
 - use a larger model
@@ -287,7 +288,7 @@ Some ideas to improve the results:
   </tr>
  </table>
 
-## Test images TODO - replace with new images
+## Test images
 
 Prediction - Ground truth
 
